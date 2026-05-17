@@ -17,10 +17,45 @@
                     <span>{{ config('rnvsync.name') }}</span>
                 </a>
 
+                @php
+                    $switcherAccounts = \App\Models\Account::orderBy('name')->get(['id', 'name']);
+                    $pendingConflicts = app(\App\Services\Conflicts\ConflictsService::class)->pendingCount();
+                @endphp
+
                 <nav class="flex items-center gap-1">
+                    @if ($switcherAccounts->isNotEmpty())
+                        <div x-data="{ open: false }" class="relative">
+                            <flux:button @click="open = !open" variant="ghost" size="sm" icon="chevron-down">
+                                {{ __('accounts.accounts') }}
+                            </flux:button>
+                            <div x-show="open" x-on:click.outside="open = false" x-cloak
+                                class="absolute right-0 mt-1 w-56 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg py-1 z-50">
+                                @foreach ($switcherAccounts as $acc)
+                                    <a href="{{ route('accounts.activity', $acc) }}"
+                                        class="block px-3 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{{ $acc->name }}</a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     <flux:button :href="route('dashboard')" variant="ghost" size="sm" icon="home">
                         {{ __('dashboard.title') }}
                     </flux:button>
+
+                    <div x-data="{ count: {{ $pendingConflicts }} }"
+                        x-init="if (window.Echo) window.Echo.channel('rnvsync').listen('.conflict.detected', e => {
+                            count = e.pendingCount;
+                            if (window.Notification && Notification.permission === 'granted') new Notification('{{ __('conflicts.notify_title') }}');
+                            else if (window.Notification && Notification.permission !== 'denied') Notification.requestPermission();
+                        });">
+                        <flux:button :href="route('conflicts')" variant="ghost" size="sm" icon="exclamation-triangle">
+                            {{ __('conflicts.title') }}
+                            <template x-if="count > 0">
+                                <span class="ml-1 inline-flex items-center justify-center rounded-full bg-rose-600 text-white text-xs px-1.5" x-text="count"></span>
+                            </template>
+                        </flux:button>
+                    </div>
+
                     <flux:button :href="route('settings')" variant="ghost" size="sm" icon="cog-6-tooth">
                         {{ __('settings.title') }}
                     </flux:button>

@@ -42,15 +42,19 @@ class AccountsService
      *
      * @throws OAuthException
      */
-    public function completeOAuth(string $code): Account
+    public function completeOAuth(string $code, string $provider = Account::PROVIDER_PERSONAL): Account
     {
         $token = $this->oauth->exchangeCode($code);
         $user = $this->oauth->fetchUser($token['access_token']);
+        $drive = $this->oauth->fetchDrive($token['access_token']);
 
         $account = Account::create([
             'name' => $user['name'] ?: ($user['email'] ?: 'OneDrive'),
-            'provider' => 'onedrive_personal',
+            'provider' => $provider,
             'remote_name' => $this->uniqueRemoteName($user['email'] ?? 'onedrive'),
+            'drive_id' => $drive['drive_id'],
+            'drive_type' => $drive['drive_type'],
+            'tenant_id' => $drive['tenant_id'],
             'email' => $user['email'],
             'oauth_token' => json_encode($token),
             'status' => Account::STATUS_ACTIVE,

@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Events\SyncStatusChanged;
 use App\Models\Account;
 use App\Models\SyncFolder;
+use App\Services\Conflicts\ConflictsService;
 use App\Services\Sync\SyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -50,6 +51,12 @@ class StartSyncJob implements ShouldQueue
         $folder = SyncFolder::with('account')->find($this->syncFolderId);
 
         if (! $folder || ! $folder->is_active) {
+            return;
+        }
+
+        // SPEC F4.4 EARS: an account with >10 conflicts is auto-paused.
+        if ($folder->account
+            && app(ConflictsService::class)->isAccountPaused($folder->account)) {
             return;
         }
 

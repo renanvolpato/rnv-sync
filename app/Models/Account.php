@@ -26,11 +26,20 @@ class Account extends Model
 
     public const STATUS_ERROR = 'error';
 
+    public const PROVIDER_PERSONAL = 'onedrive_personal';
+
+    public const PROVIDER_BUSINESS = 'onedrive_business';
+
+    public const PROVIDER_SHAREPOINT = 'sharepoint';
+
     /** @var list<string> */
     protected $fillable = [
         'name',
         'provider',
         'remote_name',
+        'drive_id',
+        'drive_type',
+        'tenant_id',
         'email',
         'oauth_token',
         'status',

@@ -54,7 +54,7 @@ class RcloneConfigGenerator
     {
         $token = $account->oauth_token ?: '{}';
 
-        $driveType = match ($account->provider) {
+        $driveType = $account->drive_type ?: match ($account->provider) {
             'onedrive_business' => 'business',
             'sharepoint' => 'documentLibrary',
             default => 'personal',
@@ -64,6 +64,7 @@ class RcloneConfigGenerator
             "[{$account->remote_name}]",
             'type = onedrive',
             "client_id = {$clientId}",
+            $account->drive_id ? "drive_id = {$account->drive_id}" : null,
             "drive_type = {$driveType}",
             "token = {$token}",
         ]));

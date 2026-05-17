@@ -143,6 +143,37 @@ class OneDriveOAuth
     }
 
     /**
+     * Detect the user's drive id/type and tenant (SPEC F4.1 EARS:
+     * detect the tenant and configure the correct drive_id/drive_type).
+     *
+     * @return array{drive_id:?string,drive_type:?string,tenant_id:?string}
+     */
+    public function fetchDrive(string $accessToken): array
+    {
+        $response = Http::withToken($accessToken)
+            ->get(config('rnvsync.oauth.graph_base').'/me/drive');
+
+        return [
+            'drive_id' => $response->json('id'),
+            'drive_type' => $response->json('driveType'), // personal|business|documentLibrary
+            'tenant_id' => $this->tenantFromToken($accessToken),
+        ];
+    }
+
+    /** Extract the `tid` (tenant) claim from a Microsoft access token JWT. */
+    public function tenantFromToken(string $accessToken): ?string
+    {
+        $parts = explode('.', $accessToken);
+        if (count($parts) < 2) {
+            return null;
+        }
+
+        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')) ?: '', true);
+
+        return is_array($payload) ? ($payload['tid'] ?? null) : null;
+    }
+
+    /**
      * Fetch drive quota (SPEC F1.6). Returns null on failure so the UI can
      * show "Quota unavailable" and retry next load.
      *

@@ -6,6 +6,7 @@ use App\Livewire\Pages\Accounts\FileBrowser;
 use App\Livewire\Pages\Accounts\FolderSelection;
 use App\Livewire\Pages\Accounts\SyncActivity;
 use App\Livewire\Pages\Auth\Login;
+use App\Livewire\Pages\ConflictsPage;
 use App\Livewire\Pages\Dashboard;
 use App\Livewire\Pages\Settings\SettingsPage;
 use App\Livewire\Pages\Setup\Wizard;
@@ -39,6 +40,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/oauth/start', [OAuthController::class, 'start'])->name('oauth.start');
     Route::get('/oauth/callback', [OAuthController::class, 'callback'])->name('oauth.callback');
+
+    Route::get('/conflicts', ConflictsPage::class)->name('conflicts');
 
     Route::get('/settings', SettingsPage::class)->name('settings');
 });

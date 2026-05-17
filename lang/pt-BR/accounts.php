@@ -5,7 +5,12 @@ return [
     'add_subtitle' => 'Conecte uma conta OneDrive ao RNV Sync.',
     'login_with_microsoft' => 'Entrar com a Microsoft',
     'oauth_redirect_note' => 'Você será redirecionado à Microsoft para autorizar o acesso. O RNV Sync nunca vê sua senha da Microsoft.',
+    'accounts' => 'Contas',
     'provider_personal_desc' => 'Uma conta Microsoft pessoal (outlook.com, hotmail.com, live.com).',
+    'provider_business_desc' => 'Uma conta corporativa ou acadêmica do Microsoft 365.',
+    'provider_sharepoint_desc' => 'Uma biblioteca de documentos do SharePoint.',
+    'sharepoint_url' => 'URL da biblioteca de documentos do SharePoint',
+    'sharepoint_url_hint' => 'ex.: https://contoso.sharepoint.com/sites/Equipe',
     'coming_later' => 'Disponível em uma versão futura',
     'added_success' => 'Conta ":name" conectada com sucesso.',
 

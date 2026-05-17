@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\OAuthException;
+use App\Models\Account;
 use App\Services\Accounts\AccountsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,11 +24,13 @@ class OAuthController extends Controller
     public function __construct(private readonly AccountsService $accounts) {}
 
     /** Kick off the flow: store CSRF state in the session, redirect to MS. */
-    public function start(): RedirectResponse
+    public function start(Request $request): RedirectResponse
     {
+        $provider = $request->string('provider')->value() ?: Account::PROVIDER_PERSONAL;
+
         [$url, $state] = $this->accounts->initiateOAuth();
 
-        session(['oauth_state' => $state]);
+        session(['oauth_state' => $state, 'oauth_provider' => $provider]);
 
         return redirect()->away($url);
     }
@@ -51,7 +54,10 @@ class OAuthController extends Controller
         session()->forget('oauth_state');
 
         try {
-            $account = $this->accounts->completeOAuth($request->string('code')->value());
+            $account = $this->accounts->completeOAuth(
+                $request->string('code')->value(),
+                session('oauth_provider', Account::PROVIDER_PERSONAL),
+            );
         } catch (OAuthException $e) {
             Log::channel('rnvsync-app')->warning('OAuth failed', ['reason' => $e->getMessage()]);
 

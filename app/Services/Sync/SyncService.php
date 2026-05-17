@@ -10,6 +10,7 @@ use App\Exceptions\RcloneException;
 use App\Jobs\StartSyncJob;
 use App\Models\SyncFolder;
 use App\Models\SyncHistory;
+use App\Services\Conflicts\ConflictsService;
 use App\Services\Rclone\JsonLogParser;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneRunner;
@@ -30,6 +31,7 @@ class SyncService
         private readonly RcloneConfigGenerator $configGenerator,
         private readonly JsonLogParser $parser,
         private readonly SettingsRepository $settings,
+        private readonly ConflictsService $conflicts,
     ) {}
 
     public function isPaused(): bool
@@ -71,6 +73,9 @@ class SyncService
 
         $entries = $this->parser->parse($result->stderr."\n".$result->stdout);
         $stats = $this->extractStats($entries);
+
+        // SPEC F4.4: persist any conflicts bisync reported.
+        $this->conflicts->detectFromLog($account, $entries);
 
         // Surface throttling distinctly so the job respects Retry-After.
         if ($this->isRateLimited($entries)) {

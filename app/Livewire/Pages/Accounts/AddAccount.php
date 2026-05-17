@@ -16,6 +16,8 @@ class AddAccount extends Component
 {
     public string $provider = 'onedrive_personal';
 
+    public string $documentLibraryUrl = '';
+
     public function render()
     {
         return view('livewire.pages.accounts.add-account');
