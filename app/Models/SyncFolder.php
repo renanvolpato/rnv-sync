@@ -18,6 +18,7 @@ class SyncFolder extends Model
     /** @var list<string> */
     protected $fillable = [
         'account_id', 'remote_path', 'local_path', 'sync_mode',
+        'transfers', 'checkers', 'chunk_size',
         'is_active', 'last_synced_at', 'last_sync_status',
     ];
 

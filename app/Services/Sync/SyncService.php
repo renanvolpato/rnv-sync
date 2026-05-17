@@ -67,7 +67,7 @@ class SyncService
         $remote = $account->remote_name.':'.ltrim($folder->remote_path, '/');
 
         $result = $this->rclone->run(
-            [...$this->bisyncArgs(), $remote, $folder->local_path],
+            [...$this->bisyncArgs($folder), $remote, $folder->local_path],
             ['timeout' => 3600, 'json_log' => true],
         );
 
@@ -122,22 +122,31 @@ class SyncService
      *
      * @return list<string>
      */
-    public function bisyncArgs(): array
+    public function bisyncArgs(?SyncFolder $folder = null): array
     {
         $cfg = config('rnvsync.sync');
+
+        // SPEC F5.3: per-folder advanced overrides.
+        $transfers = $folder?->transfers ?: $cfg['transfers'];
+        $checkers = $folder?->checkers ?: $cfg['checkers'];
 
         $args = [
             'bisync',
             '--resync', // first-run safe; rclone no-ops if state exists
-            '--transfers='.$cfg['transfers'],
-            '--checkers='.$cfg['checkers'],
+            '--transfers='.$transfers,
+            '--checkers='.$checkers,
             '--tpslimit='.$cfg['tpslimit'],
             '--tpslimit-burst='.$cfg['tpslimit_burst'],
             '--stats=1s',
             '--stats-one-line',
         ];
 
-        $bwlimit = $this->settings->get('bandwidth_limit_kbps');
+        if ($folder?->chunk_size) {
+            $args[] = '--onedrive-chunk-size='.$folder->chunk_size;
+        }
+
+        // SPEC F2.8 + F5.2: effective limit may come from the scheduler.
+        $bwlimit = app(BandwidthScheduler::class)->effectiveLimitKbps();
         if ($bwlimit) {
             $args[] = '--bwlimit='.$bwlimit.'k';
         }

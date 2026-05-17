@@ -24,6 +24,14 @@
             <flux:input type="number" wire:model="bandwidth_limit_kbps"
                 :label="__('settings.bandwidth_limit')"
                 :description="__('settings.bandwidth_hint')" min="0" />
+
+            <flux:checkbox wire:model.live="bw_schedule_enabled" :label="__('settings.bw_schedule_enable')" />
+            <div class="grid grid-cols-3 gap-3" @if(! $bw_schedule_enabled) style="display:none" @endif>
+                <flux:input type="time" wire:model="bw_schedule_start" :label="__('settings.bw_start')" />
+                <flux:input type="time" wire:model="bw_schedule_end" :label="__('settings.bw_end')" />
+                <flux:input type="number" wire:model="bw_schedule_kbps" :label="__('settings.bw_window_limit')" min="0" />
+            </div>
+
             <flux:button type="submit" variant="primary">{{ __('common.save') }}</flux:button>
         </form>
     </flux:card>
@@ -64,5 +72,20 @@
             </div>
         </dl>
         <p class="mt-4 text-xs text-zinc-500 dark:text-zinc-400">{{ __('common.powered_by_rclone') }}</p>
+    </flux:card>
+
+    {{-- Config export / import (SPEC F5.9) --}}
+    <flux:card>
+        <flux:heading size="lg">{{ __('settings.section_config') }}</flux:heading>
+        <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{{ __('settings.config_hint') }}</p>
+        <div class="mt-4 flex flex-wrap items-end gap-3">
+            <flux:button :href="route('config.export')" variant="ghost" icon="arrow-down-tray">
+                {{ __('settings.config_export') }}
+            </flux:button>
+            <form wire:submit="importConfig" class="flex items-end gap-2">
+                <flux:input type="file" wire:model="configFile" :label="__('settings.config_import')" accept="application/json" />
+                <flux:button type="submit" variant="primary">{{ __('settings.config_import_btn') }}</flux:button>
+            </form>
+        </div>
     </flux:card>
 </div>

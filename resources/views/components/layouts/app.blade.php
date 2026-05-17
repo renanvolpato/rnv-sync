@@ -9,9 +9,12 @@
     @fluxAppearance
 </head>
 <body class="h-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded focus:bg-sky-600 focus:px-3 focus:py-2 focus:text-white">
+        {{ __('common.skip_to_content') }}
+    </a>
     <div class="min-h-full">
         <header class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <div class="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
+            <div class="mx-auto max-w-6xl px-4 py-2 flex items-center justify-between gap-2 flex-wrap">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-2 font-semibold">
                     <flux:icon.cloud class="size-6 text-sky-600 dark:text-sky-500" />
                     <span>{{ config('rnvsync.name') }}</span>
@@ -56,6 +59,12 @@
                         </flux:button>
                     </div>
 
+                    <flux:button :href="route('search')" variant="ghost" size="sm" icon="magnifying-glass">
+                        {{ __('search.title') }}
+                    </flux:button>
+                    <flux:button :href="route('trends')" variant="ghost" size="sm" icon="chart-bar">
+                        {{ __('trends.title') }}
+                    </flux:button>
                     <flux:button :href="route('settings')" variant="ghost" size="sm" icon="cog-6-tooth">
                         {{ __('settings.title') }}
                     </flux:button>
@@ -69,7 +78,7 @@
             </div>
         </header>
 
-        <main class="mx-auto max-w-6xl px-4 py-8">
+        <main id="main" class="mx-auto max-w-6xl px-4 py-8">
             @if (session('status'))
                 <flux:callout variant="success" class="mb-6" icon="check-circle">
                     {{ session('status') }}

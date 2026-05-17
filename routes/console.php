@@ -18,3 +18,6 @@ Schedule::call(fn () => app(CacheService::class)->evictToLimit())
     ->everyFiveMinutes()
     ->name('rnvsync-cache-evict')
     ->withoutOverlapping();
+
+// SPEC F5.5: daily storage usage snapshot for trends.
+Schedule::command('rnvsync:capture-usage')->dailyAt('23:55');

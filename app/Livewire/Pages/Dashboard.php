@@ -4,6 +4,7 @@ namespace App\Livewire\Pages;
 
 use App\Models\Account;
 use App\Services\Accounts\AccountsService;
+use App\Services\Settings\SettingsRepository;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -21,8 +22,12 @@ class Dashboard extends Component
     /** @var array<int,bool> account_id => quota fetch ok */
     public array $quotaStatus = [];
 
-    public function mount(AccountsService $accounts): void
+    public bool $showOnboarding = false;
+
+    public function mount(AccountsService $accounts, SettingsRepository $settings): void
     {
+        $this->showOnboarding = ! $settings->get('onboarding_done', false);
+
         foreach (Account::all() as $account) {
             try {
                 $this->quotaStatus[$account->id] = $accounts->refreshQuota($account);
@@ -30,6 +35,12 @@ class Dashboard extends Component
                 $this->quotaStatus[$account->id] = false;
             }
         }
+    }
+
+    public function dismissOnboarding(SettingsRepository $settings): void
+    {
+        $settings->set('onboarding_done', true);
+        $this->showOnboarding = false;
     }
 
     /** @return Collection<int,Account> */

@@ -1,4 +1,22 @@
 <div>
+    @if ($showOnboarding)
+        <div class="mb-6 rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/40 p-5">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="font-semibold">{{ __('onboarding.title') }}</h3>
+                    <ol class="mt-2 space-y-1 text-sm text-zinc-600 dark:text-zinc-300 list-decimal list-inside">
+                        <li>{{ __('onboarding.step_1') }}</li>
+                        <li>{{ __('onboarding.step_2') }}</li>
+                        <li>{{ __('onboarding.step_3') }}</li>
+                    </ol>
+                </div>
+                <flux:button wire:click="dismissOnboarding" variant="ghost" size="sm" icon="x-mark">
+                    {{ __('onboarding.dismiss') }}
+                </flux:button>
+            </div>
+        </div>
+    @endif
+
     <div class="flex items-center justify-between mb-6">
         <div>
             <flux:heading size="xl">{{ __('dashboard.title') }}</flux:heading>

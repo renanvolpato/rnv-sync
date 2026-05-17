@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\OAuthController;
 use App\Livewire\Pages\Accounts\AddAccount;
 use App\Livewire\Pages\Accounts\FileBrowser;
@@ -8,8 +9,10 @@ use App\Livewire\Pages\Accounts\SyncActivity;
 use App\Livewire\Pages\Auth\Login;
 use App\Livewire\Pages\ConflictsPage;
 use App\Livewire\Pages\Dashboard;
+use App\Livewire\Pages\SearchPage;
 use App\Livewire\Pages\Settings\SettingsPage;
 use App\Livewire\Pages\Setup\Wizard;
+use App\Livewire\Pages\TrendsPage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +45,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/oauth/callback', [OAuthController::class, 'callback'])->name('oauth.callback');
 
     Route::get('/conflicts', ConflictsPage::class)->name('conflicts');
+    Route::get('/search', SearchPage::class)->name('search');
+    Route::get('/trends', TrendsPage::class)->name('trends');
+    Route::get('/config/export', [ConfigController::class, 'export'])->name('config.export');
 
     Route::get('/settings', SettingsPage::class)->name('settings');
 });
