@@ -83,14 +83,19 @@ install: see [docs/installation.md](docs/installation.md).
 
 ## Development
 
+One command sets everything up — installs the PHP SQLite extension and
+all dependencies, generates `.env`/key, downloads rclone, migrates and
+builds assets (idempotent, distro-aware):
+
 ```bash
-composer install
-npm install && npm run build
-cp .env.example .env && php artisan key:generate
-touch database/database.sqlite && php artisan migrate
+bash install/bootstrap.sh      # or: composer setup
 php artisan serve --port=8080
 php artisan test
 ```
+
+Check the environment any time with `php artisan rnvsync:doctor`. If a
+requirement is missing, the app shows a WordPress-style **requirements
+screen** with the exact fix command and a "Re-check" button.
 
 Requires PHP 8.3 with the `pdo_sqlite` extension. See
 [CONTRIBUTING.md](CONTRIBUTING.md).

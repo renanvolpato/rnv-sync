@@ -62,10 +62,16 @@ class SettingsRepository
      */
     public function setupComplete(): bool
     {
-        return Cache::remember(
-            'rnvsync.setup_complete',
-            now()->addMinutes(5),
-            fn (): bool => User::query()->exists(),
-        );
+        try {
+            return Cache::remember(
+                'rnvsync.setup_complete',
+                now()->addMinutes(5),
+                fn (): bool => User::query()->exists(),
+            );
+        } catch (\Throwable) {
+            // DB driver/file not ready yet (pre-bootstrap). The
+            // requirements preflight handles this case.
+            return false;
+        }
     }
 }

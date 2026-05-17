@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\OAuthController;
+use App\Http\Controllers\RequirementsController;
 use App\Livewire\Pages\Accounts\AddAccount;
 use App\Livewire\Pages\Accounts\FileBrowser;
 use App\Livewire\Pages\Accounts\FolderSelection;
@@ -13,8 +14,23 @@ use App\Livewire\Pages\SearchPage;
 use App\Livewire\Pages\Settings\SettingsPage;
 use App\Livewire\Pages\Setup\Wizard;
 use App\Livewire\Pages\TrendsPage;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+
+// Environment preflight (WordPress-style). Stateless: session and CSRF
+// middleware are stripped so it renders even with no SQLite driver.
+Route::get('/requirements', [RequirementsController::class, 'index'])
+    ->name('requirements')
+    ->withoutMiddleware([
+        EncryptCookies::class,
+        StartSession::class,
+        ShareErrorsFromSession::class,
+        ValidateCsrfToken::class,
+    ]);
 
 // First-run setup wizard (gated by EnsureSetupComplete middleware).
 Route::get('/setup', Wizard::class)->name('setup.index');

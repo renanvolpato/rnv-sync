@@ -2,6 +2,7 @@
 
 use App\Exceptions\OAuthException;
 use App\Exceptions\RcloneException;
+use App\Http\Middleware\EnsureRequirementsMet;
 use App\Http\Middleware\EnsureSetupComplete;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -17,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Global preflight: runs before the web group so it works even
+        // when the SQLite driver is missing (WordPress-style setup).
+        $middleware->prepend(EnsureRequirementsMet::class);
+
         $middleware->web(append: [
             SetLocale::class,
             EnsureSetupComplete::class,

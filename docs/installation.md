@@ -43,7 +43,13 @@ curl -fsSL https://raw.githubusercontent.com/<owner>/rnv-sync/main/install/insta
 The script detects your distro, installs missing dependencies, clones the
 app to `~/.local/share/rnv-sync/`, downloads the pinned rclone binary,
 generates `.env`, runs migrations and installs systemd **user** services
-(`rnv-sync-web`, `rnv-sync-queue`, `rnv-sync-reverb`). No root required.
+(`rnv-sync-web`, `rnv-sync-queue`, `rnv-sync-reverb`).
+
+For a clone you already have, `bash install/bootstrap.sh` (or
+`composer setup`) does the same prerequisite setup idempotently —
+including installing the PHP SQLite extension for your distro. The web
+**requirements screen** and `php artisan rnvsync:doctor` point to this
+command whenever something is missing.
 
 Uninstall with `install/uninstall.sh`.
 

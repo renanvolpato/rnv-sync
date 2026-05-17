@@ -21,6 +21,12 @@ class EnsureSetupComplete
 
     public function handle(Request $request, Closure $next): Response
     {
+        // The requirements preflight owns the request until the
+        // environment is ready; never bounce away from it.
+        if ($request->routeIs('requirements*')) {
+            return $next($request);
+        }
+
         $complete = $this->settings->setupComplete();
         $onWizard = $request->routeIs('setup.*');
 
