@@ -1,0 +1,26 @@
+# Development compose: source-built image with the local tree mounted.
+#   docker compose -f docker/docker-compose.dev.yml up --build
+
+services:
+  rnv-sync:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: rnv-sync-dev
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ../:/app
+      - ./data:/app/storage
+    devices:
+      - /dev/fuse
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8080
+      - DB_DATABASE=/app/storage/database.sqlite

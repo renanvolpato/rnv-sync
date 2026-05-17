@@ -1,0 +1,183 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Graph;
+
+use App\Exceptions\OAuthException;
+use App\Models\Account;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+
+/**
+ * In-app Microsoft OAuth for OneDrive (SPEC §8 "OAuth Flow", Path B).
+ *
+ * Tokens are stored in the rclone-compatible JSON shape
+ * ({access_token, token_type, refresh_token, expiry}) and encrypted at
+ * rest on the Account model. rclone reads them via the generated config.
+ */
+class OneDriveOAuth
+{
+    /**
+     * Build the Microsoft authorize URL and remember the CSRF state.
+     */
+    public function authorizeUrl(string $state): string
+    {
+        $params = http_build_query([
+            'client_id' => config('rnvsync.oauth.client_id'),
+            'response_type' => 'code',
+            'redirect_uri' => $this->redirectUri(),
+            'response_mode' => 'query',
+            'scope' => config('rnvsync.oauth.scopes'),
+            'state' => $state,
+        ]);
+
+        return config('rnvsync.oauth.authorize_url').'?'.$params;
+    }
+
+    public function newState(): string
+    {
+        return Str::random(40);
+    }
+
+    public function redirectUri(): string
+    {
+        return rtrim((string) config('app.url'), '/').'/oauth/callback';
+    }
+
+    /**
+     * Exchange an authorization code for a token set.
+     *
+     * @return array<string,mixed> rclone-shaped token payload
+     *
+     * @throws OAuthException
+     */
+    public function exchangeCode(string $code): array
+    {
+        $response = Http::asForm()->post(config('rnvsync.oauth.token_url'), [
+            'client_id' => config('rnvsync.oauth.client_id'),
+            'client_secret' => config('rnvsync.oauth.client_secret') ?: null,
+            'redirect_uri' => $this->redirectUri(),
+            'grant_type' => 'authorization_code',
+            'code' => $code,
+            'scope' => config('rnvsync.oauth.scopes'),
+        ]);
+
+        if ($response->failed()) {
+            throw OAuthException::tokenExchangeFailed($response->json('error_description') ?? $response->body());
+        }
+
+        return $this->normalizeToken($response->json());
+    }
+
+    /**
+     * Refresh an account's token if it is within the refresh window of
+     * expiry. Returns true if a refresh actually happened.
+     *
+     * SPEC F1 EARS: refresh automatically within 10 minutes of expiry.
+     *
+     * @throws OAuthException
+     */
+    public function refreshIfNeeded(Account $account): bool
+    {
+        $payload = $account->tokenPayload();
+
+        if (! $payload || empty($payload['refresh_token'])) {
+            return false;
+        }
+
+        $expiry = isset($payload['expiry'])
+            ? CarbonImmutable::parse($payload['expiry'])
+            : CarbonImmutable::now()->subMinute();
+
+        $window = (int) config('rnvsync.oauth.refresh_window_seconds');
+
+        if ($expiry->isAfter(CarbonImmutable::now()->addSeconds($window))) {
+            return false;
+        }
+
+        $response = Http::asForm()->post(config('rnvsync.oauth.token_url'), [
+            'client_id' => config('rnvsync.oauth.client_id'),
+            'client_secret' => config('rnvsync.oauth.client_secret') ?: null,
+            'redirect_uri' => $this->redirectUri(),
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $payload['refresh_token'],
+            'scope' => config('rnvsync.oauth.scopes'),
+        ]);
+
+        if ($response->failed()) {
+            $account->update(['status' => Account::STATUS_DISCONNECTED]);
+
+            throw OAuthException::refreshFailed($response->json('error_description') ?? $response->body());
+        }
+
+        $token = $this->normalizeToken($response->json(), $payload['refresh_token']);
+
+        $account->update([
+            'oauth_token' => json_encode($token),
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Fetch the signed-in user's email/display name (User.Read scope).
+     *
+     * @return array{email:?string,name:?string}
+     */
+    public function fetchUser(string $accessToken): array
+    {
+        $response = Http::withToken($accessToken)
+            ->get(config('rnvsync.oauth.graph_base').'/me');
+
+        if ($response->failed()) {
+            return ['email' => null, 'name' => null];
+        }
+
+        return [
+            'email' => $response->json('mail') ?? $response->json('userPrincipalName'),
+            'name' => $response->json('displayName'),
+        ];
+    }
+
+    /**
+     * Fetch drive quota (SPEC F1.6). Returns null on failure so the UI can
+     * show "Quota unavailable" and retry next load.
+     *
+     * @return array{total:int,used:int}|null
+     */
+    public function fetchQuota(string $accessToken): ?array
+    {
+        $response = Http::withToken($accessToken)
+            ->get(config('rnvsync.oauth.graph_base').'/me/drive');
+
+        if ($response->failed() || ! $response->json('quota')) {
+            return null;
+        }
+
+        return [
+            'total' => (int) $response->json('quota.total'),
+            'used' => (int) $response->json('quota.used'),
+        ];
+    }
+
+    /**
+     * Normalize a Microsoft token response into rclone's stored shape.
+     *
+     * @param  array<string,mixed>  $data
+     * @return array<string,mixed>
+     */
+    private function normalizeToken(array $data, ?string $fallbackRefresh = null): array
+    {
+        $expiresIn = (int) ($data['expires_in'] ?? 3600);
+
+        return [
+            'access_token' => $data['access_token'] ?? '',
+            'token_type' => $data['token_type'] ?? 'Bearer',
+            'refresh_token' => $data['refresh_token'] ?? $fallbackRefresh ?? '',
+            'expiry' => CarbonImmutable::now()->addSeconds($expiresIn)->toRfc3339String(),
+        ];
+    }
+}

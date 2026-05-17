@@ -1,0 +1,34 @@
+# RNV Sync — primary distribution path (SPEC §11).
+#
+#   mkdir ~/rnv-sync && cd ~/rnv-sync
+#   curl -fsSL https://raw.githubusercontent.com/<owner>/rnv-sync/main/docker-compose.yml -o docker-compose.yml
+#   docker compose up -d
+#
+# Then open http://localhost:8080 and complete the setup wizard.
+
+services:
+  rnv-sync:
+    image: ghcr.io/renanvolpatto/rnv-sync:latest
+    # For a local source build instead of the published image:
+    # build:
+    #   context: .
+    #   dockerfile: docker/Dockerfile
+    container_name: rnv-sync
+    restart: unless-stopped
+    ports:
+      # Bound to localhost only by default (SPEC §12). Change to
+      # "0.0.0.0:8080:8080" to expose on the LAN (requires a strong password).
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./data:/app/storage
+      - ${HOME}/RnvSync:/mnt/rnvsync:rshared
+    devices:
+      - /dev/fuse
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      - APP_URL=http://localhost:8080
+      - DB_DATABASE=/app/storage/database.sqlite
+      - RCLONE_MOUNT_BASE=/mnt/rnvsync
