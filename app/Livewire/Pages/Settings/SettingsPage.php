@@ -130,7 +130,7 @@ class SettingsPage extends Component
     public function render(RcloneBinary $binary)
     {
         return view('livewire.pages.settings.settings-page', [
-            'appVersion' => 'v0.5.0',
+            'appVersion' => 'v1.0.0',
             'rcloneVersion' => $binary->version() ?? __('settings.rclone_not_bundled'),
         ]);
     }

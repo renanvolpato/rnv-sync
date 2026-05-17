@@ -1,0 +1,13 @@
+[Unit]
+Description=RNV Sync web panel
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=@APP_DIR@
+ExecStart=@PHP@ artisan serve --host=127.0.0.1 --port=8080
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

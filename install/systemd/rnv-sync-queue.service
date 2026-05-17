@@ -1,0 +1,13 @@
+[Unit]
+Description=RNV Sync queue worker & scheduler
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=@APP_DIR@
+ExecStart=/bin/bash -c '@PHP@ artisan queue:work --sleep=3 --tries=4 & while true; do @PHP@ artisan schedule:run; sleep 60; done'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
