@@ -17,6 +17,17 @@
         </form>
     </flux:card>
 
+    {{-- Network --}}
+    <flux:card>
+        <flux:heading size="lg">{{ __('settings.section_network') }}</flux:heading>
+        <form wire:submit="saveNetwork" class="mt-4 space-y-4">
+            <flux:input type="number" wire:model="bandwidth_limit_kbps"
+                :label="__('settings.bandwidth_limit')"
+                :description="__('settings.bandwidth_hint')" min="0" />
+            <flux:button type="submit" variant="primary">{{ __('common.save') }}</flux:button>
+        </form>
+    </flux:card>
+
     {{-- Change password --}}
     <flux:card>
         <flux:heading size="lg">{{ __('settings.section_password') }}</flux:heading>

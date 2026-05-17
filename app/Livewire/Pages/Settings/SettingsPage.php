@@ -20,6 +20,8 @@ class SettingsPage extends Component
 
     public string $mount_base = '';
 
+    public ?int $bandwidth_limit_kbps = null;
+
     public string $current_password = '';
 
     public string $new_password = '';
@@ -30,6 +32,17 @@ class SettingsPage extends Component
     {
         $this->language = $settings->language();
         $this->mount_base = $settings->mountBase();
+        $this->bandwidth_limit_kbps = $settings->get('bandwidth_limit_kbps');
+    }
+
+    public function saveNetwork(SettingsRepository $settings): void
+    {
+        $this->validate(['bandwidth_limit_kbps' => 'nullable|integer|min:0']);
+
+        $settings->set('bandwidth_limit_kbps', $this->bandwidth_limit_kbps ?: null);
+
+        session()->flash('status', __('settings.saved'));
+        $this->redirectRoute('settings', navigate: true);
     }
 
     public function saveGeneral(SettingsRepository $settings): void

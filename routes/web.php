@@ -3,6 +3,8 @@
 use App\Http\Controllers\OAuthController;
 use App\Livewire\Pages\Accounts\AddAccount;
 use App\Livewire\Pages\Accounts\FileBrowser;
+use App\Livewire\Pages\Accounts\FolderSelection;
+use App\Livewire\Pages\Accounts\SyncActivity;
 use App\Livewire\Pages\Auth\Login;
 use App\Livewire\Pages\Dashboard;
 use App\Livewire\Pages\Settings\SettingsPage;
@@ -32,6 +34,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/accounts/new', AddAccount::class)->name('accounts.new');
     Route::get('/accounts/{account}/files', FileBrowser::class)->name('accounts.files');
+    Route::get('/accounts/{account}/folders', FolderSelection::class)->name('accounts.folders');
+    Route::get('/accounts/{account}/activity', SyncActivity::class)->name('accounts.activity');
 
     Route::get('/oauth/start', [OAuthController::class, 'start'])->name('oauth.start');
     Route::get('/oauth/callback', [OAuthController::class, 'callback'])->name('oauth.callback');

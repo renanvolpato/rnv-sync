@@ -70,6 +70,17 @@ return [
     |--------------------------------------------------------------------------
     */
 
+    'sync' => [
+        // Default rclone flags for sync operations (SPEC §8).
+        'transfers' => 4,
+        'checkers' => 8,
+        'tpslimit' => 10,
+        'tpslimit_burst' => 20,
+        // Network-failure retry policy (SPEC §9 v0.2.0 EARS / §17).
+        'max_retries' => 3,
+        'backoff_seconds' => [5, 30, 300],
+    ],
+
     'defaults' => [
         'theme' => 'auto',
         'sync_interval_minutes' => 15,
