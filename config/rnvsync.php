@@ -70,6 +70,21 @@ return [
     |--------------------------------------------------------------------------
     */
 
+    'mount' => [
+        // Default rclone mount flags (SPEC §8 "For mounts").
+        'vfs_cache_mode' => 'full',
+        'vfs_cache_max_age' => '168h',
+        'vfs_read_ahead' => '128M',
+        'buffer_size' => '64M',
+        'dir_cache_time' => '5m',
+        'poll_interval' => '15s',
+        'tpslimit' => 10,
+        'tpslimit_burst' => 20,
+        // Lifecycle (SPEC §17 / §9 v0.3.0 EARS).
+        'max_restarts' => 3,
+        'health_unresponsive_after_seconds' => 60,
+    ],
+
     'sync' => [
         // Default rclone flags for sync operations (SPEC §8).
         'transfers' => 4,

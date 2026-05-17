@@ -43,6 +43,31 @@
 
             {{ $slot }}
         </main>
+
+        {{-- Toast notifications (SPEC §10): bottom-right, errors persist --}}
+        <div
+            x-data="{ toasts: [] }"
+            @toast.window="
+                const t = { id: Date.now(), ...$event.detail };
+                toasts.push(t);
+                if (t.type !== 'error') setTimeout(() => toasts = toasts.filter(x => x.id !== t.id), 5000);
+            "
+            class="fixed bottom-4 right-4 z-50 space-y-2 w-80"
+        >
+            <template x-for="t in toasts" :key="t.id">
+                <div
+                    @click="toasts = toasts.filter(x => x.id !== t.id)"
+                    class="rounded-lg shadow-lg p-3 text-sm text-white cursor-pointer"
+                    :class="{
+                        'bg-emerald-600': t.type === 'success',
+                        'bg-sky-600': t.type === 'info',
+                        'bg-amber-500': t.type === 'warning',
+                        'bg-rose-600': t.type === 'error',
+                    }"
+                    x-text="t.message"
+                ></div>
+            </template>
+        </div>
     </div>
     @fluxScripts
 </body>

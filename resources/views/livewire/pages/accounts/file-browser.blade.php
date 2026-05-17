@@ -1,18 +1,35 @@
 <div>
     @php use App\Support\Bytes; @endphp
 
+    {{-- Cache statistics panel (SPEC F3.4) --}}
+    <div class="mb-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 flex items-center justify-between gap-4">
+        <div class="flex-1">
+            <div class="flex justify-between text-sm mb-1">
+                <span class="text-zinc-600 dark:text-zinc-400">
+                    {{ __('cache.usage') }}: {{ Bytes::human($cacheStats['usage']) }} / {{ Bytes::human($cacheStats['limit']) }}
+                    · {{ $cacheStats['files'] }} {{ __('cache.files') }}
+                </span>
+                <span class="font-medium">{{ $cacheStats['percent'] }}%</span>
+            </div>
+            <div class="h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                <div class="h-full bg-sky-600" style="width: {{ min($cacheStats['percent'], 100) }}%"></div>
+            </div>
+        </div>
+        <flux:button wire:click="freeAll"
+            wire:confirm="{{ __('cache.free_all_confirm') }}"
+            variant="ghost" size="sm" icon="trash">
+            {{ __('cache.free_all') }}
+        </flux:button>
+    </div>
+
     <div class="flex items-center gap-2 mb-4 text-sm flex-wrap">
-        @foreach ($this->breadcrumbs() as $i => $crumb)
+        @foreach ($this->breadcrumbs() as $crumb)
             @if (! $loop->first)
                 <flux:icon.chevron-right class="size-3.5 text-zinc-400" />
             @endif
-            <button
-                wire:click="goTo('{{ $crumb['path'] }}')"
-                @class([
-                    'hover:underline',
-                    'font-semibold' => $loop->last,
-                    'text-zinc-500 dark:text-zinc-400' => ! $loop->last,
-                ])
+            <button wire:click="goTo('{{ $crumb['path'] }}')"
+                @class(['hover:underline', 'font-semibold' => $loop->last,
+                    'text-zinc-500 dark:text-zinc-400' => ! $loop->last])
             >{{ $crumb['label'] }}</button>
         @endforeach
     </div>
@@ -34,7 +51,9 @@
                 <thead class="border-b border-zinc-200 dark:border-zinc-800 text-left text-zinc-500 dark:text-zinc-400">
                     <tr>
                         <th class="px-4 py-2 font-medium">{{ __('accounts.col_name') }}</th>
+                        <th class="px-4 py-2 font-medium">{{ __('cache.col_status') }}</th>
                         <th class="px-4 py-2 font-medium text-right">{{ __('accounts.col_size') }}</th>
+                        <th class="px-4 py-2"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -53,8 +72,36 @@
                                     </span>
                                 @endif
                             </td>
+                            <td class="px-4 py-2.5">
+                                @switch($entry['status'])
+                                    @case('pinned')
+                                        <flux:badge size="sm" color="sky" icon="bookmark">{{ __('cache.status_pinned') }}</flux:badge>
+                                        @break
+                                    @case('cached')
+                                        <flux:badge size="sm" color="emerald" icon="check">{{ __('cache.status_cached') }}</flux:badge>
+                                        @break
+                                    @default
+                                        <flux:badge size="sm" color="zinc" icon="cloud">{{ __('cache.status_online') }}</flux:badge>
+                                @endswitch
+                            </td>
                             <td class="px-4 py-2.5 text-right text-zinc-500 dark:text-zinc-400 font-mono text-xs">
                                 {{ $entry['is_dir'] ? '—' : Bytes::human($entry['size']) }}
+                            </td>
+                            <td class="px-4 py-2.5 text-right whitespace-nowrap">
+                                @if ($entry['status'] === 'pinned')
+                                    <flux:button wire:click="unpin('{{ addslashes($entry['name']) }}')" size="xs" variant="ghost">
+                                        {{ __('cache.unpin') }}
+                                    </flux:button>
+                                @else
+                                    <flux:button wire:click="pin('{{ addslashes($entry['name']) }}', {{ $entry['is_dir'] ? 'true' : 'false' }}, {{ $entry['size'] }})" size="xs" variant="ghost" icon="bookmark">
+                                        {{ __('cache.pin') }}
+                                    </flux:button>
+                                @endif
+                                @if ($entry['status'] === 'cached')
+                                    <flux:button wire:click="freeUp('{{ addslashes($entry['name']) }}')" size="xs" variant="ghost" icon="trash">
+                                        {{ __('cache.free') }}
+                                    </flux:button>
+                                @endif
                             </td>
                         </tr>
                     @endforeach
@@ -63,5 +110,5 @@
         @endif
     </div>
 
-    <p class="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{{ __('accounts.read_only_note') }}</p>
+    <p class="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{{ __('cache.fod_note') }}</p>
 </div>

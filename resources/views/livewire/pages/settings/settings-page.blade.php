@@ -28,6 +28,17 @@
         </form>
     </flux:card>
 
+    {{-- Cache --}}
+    <flux:card>
+        <flux:heading size="lg">{{ __('cache.section_cache') }}</flux:heading>
+        <form wire:submit="saveCache" class="mt-4 space-y-4">
+            <flux:input type="number" wire:model="cache_max_gb"
+                :label="__('cache.max_size_gb')"
+                :description="__('cache.max_size_hint')" min="1" />
+            <flux:button type="submit" variant="primary">{{ __('common.save') }}</flux:button>
+        </form>
+    </flux:card>
+
     {{-- Change password --}}
     <flux:card>
         <flux:heading size="lg">{{ __('settings.section_password') }}</flux:heading>

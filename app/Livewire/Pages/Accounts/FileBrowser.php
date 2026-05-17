@@ -4,15 +4,17 @@ namespace App\Livewire\Pages\Accounts;
 
 use App\Models\Account;
 use App\Services\Accounts\AccountsService;
+use App\Services\Cache\CacheService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * Read-only remote file tree (SPEC F1.5 / Key Screen 6, listing only).
+ * File browser (SPEC F1.5 + F3.5/F3.6/F3.7/F3.8).
  *
- * Listing comes from `rclone lsjson`. Browsing is path-based and the
- * current path is reflected in the URL so it is shareable.
+ * Listing comes from `rclone lsjson`. Each entry shows its cache status
+ * (online / cached / pinned) and offers pin / free-up-space actions.
+ * Path is reflected in the URL so it is shareable.
  */
 #[Layout('components.layouts.app')]
 class FileBrowser extends Component
@@ -39,6 +41,38 @@ class FileBrowser extends Component
         $this->path = trim($path, '/');
     }
 
+    public function pin(string $name, bool $isDir, int $size, CacheService $cache): void
+    {
+        $full = trim($this->path.'/'.$name, '/');
+
+        if (! $cache->pin($this->account, $full, $isDir, $size)) {
+            // SPEC F3.6 EARS: file larger than cache → warn, offer increase.
+            $this->dispatch('toast', type: 'warning', message: __('cache.pin_too_large'));
+
+            return;
+        }
+
+        $this->dispatch('toast', type: 'success', message: __('cache.pinned'));
+    }
+
+    public function unpin(string $name, CacheService $cache): void
+    {
+        $cache->unpin($this->account, trim($this->path.'/'.$name, '/'));
+        $this->dispatch('toast', type: 'success', message: __('cache.unpinned'));
+    }
+
+    public function freeUp(string $name, CacheService $cache): void
+    {
+        $cache->freeUpSpace($this->account, trim($this->path.'/'.$name, '/'));
+        $this->dispatch('toast', type: 'success', message: __('cache.freed'));
+    }
+
+    public function freeAll(CacheService $cache): void
+    {
+        $cache->freeAllCache();
+        $this->dispatch('toast', type: 'success', message: __('cache.freed_all'));
+    }
+
     /**
      * @return list<array{label:string,path:string}>
      */
@@ -55,7 +89,7 @@ class FileBrowser extends Component
         return $crumbs;
     }
 
-    public function render(AccountsService $accounts)
+    public function render(AccountsService $accounts, CacheService $cache)
     {
         $entries = [];
 
@@ -65,8 +99,14 @@ class FileBrowser extends Component
             $this->rcloneUnavailable = true;
         }
 
+        foreach ($entries as &$entry) {
+            $entry['status'] = $cache->cacheStatus($this->account, $entry['path']);
+        }
+        unset($entry);
+
         return view('livewire.pages.accounts.file-browser', [
             'entries' => $entries,
+            'cacheStats' => $cache->stats(),
         ]);
     }
 }

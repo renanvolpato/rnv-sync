@@ -22,6 +22,8 @@ class SettingsPage extends Component
 
     public ?int $bandwidth_limit_kbps = null;
 
+    public ?int $cache_max_gb = null;
+
     public string $current_password = '';
 
     public string $new_password = '';
@@ -33,6 +35,17 @@ class SettingsPage extends Component
         $this->language = $settings->language();
         $this->mount_base = $settings->mountBase();
         $this->bandwidth_limit_kbps = $settings->get('bandwidth_limit_kbps');
+        $this->cache_max_gb = $settings->get('cache_max_gb');
+    }
+
+    public function saveCache(SettingsRepository $settings): void
+    {
+        $this->validate(['cache_max_gb' => 'nullable|integer|min:1']);
+
+        $settings->set('cache_max_gb', $this->cache_max_gb ?: null);
+
+        session()->flash('status', __('settings.saved'));
+        $this->redirectRoute('settings', navigate: true);
     }
 
     public function saveNetwork(SettingsRepository $settings): void
@@ -85,7 +98,7 @@ class SettingsPage extends Component
     public function render(RcloneBinary $binary)
     {
         return view('livewire.pages.settings.settings-page', [
-            'appVersion' => 'v0.1.0',
+            'appVersion' => 'v0.3.0',
             'rcloneVersion' => $binary->version() ?? __('settings.rclone_not_bundled'),
         ]);
     }
