@@ -27,6 +27,14 @@ class EnsureSetupComplete
             return $next($request);
         }
 
+        // Never redirect Livewire's own AJAX endpoint: it powers the
+        // setup wizard itself, and a redirect here would be swallowed by
+        // the Livewire client (the wizard would silently never advance).
+        // Component-level access control still applies.
+        if ($request->routeIs('livewire.*') || $request->hasHeader('X-Livewire')) {
+            return $next($request);
+        }
+
         $complete = $this->settings->setupComplete();
         $onWizard = $request->routeIs('setup.*');
 
