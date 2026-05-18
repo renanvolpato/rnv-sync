@@ -81,7 +81,7 @@ class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProv
         any_cloud = any(not _is_downloaded(p) for p in targets)
         menu = Nautilus.MenuItem(
             name="RnvSync::Action",
-            label=("Baixar (RNV Sync)" if any_cloud else "Liberar espaço (RNV Sync)"),
+            label=("Sempre manter neste dispositivo (RNV Sync)" if any_cloud else "Liberar espaço (RNV Sync)"),
         )
         action = "download" if any_cloud else "free"
         menu.connect(

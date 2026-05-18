@@ -18,6 +18,7 @@ return [
     'clear_history_confirm' => 'Delete the sync history? (runs in progress are kept)',
     'history_cleared' => 'Sync history cleared.',
     'sync_now' => 'Sync now',
+    'manage_files' => 'Files / keep offline',
     'queued' => 'Sync queued.',
     'unsynced' => 'Folder removed from sync. Local files were kept.',
     'unsync_confirm' => 'Stop syncing this folder? Local files stay; future changes won’t sync.',

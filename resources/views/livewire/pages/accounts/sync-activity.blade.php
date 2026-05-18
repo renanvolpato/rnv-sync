@@ -74,6 +74,10 @@
                         @elseif ($folder->last_sync_status === 'success')
                             <flux:badge size="sm" color="emerald">{{ __('sync.status_success') }}</flux:badge>
                         @endif
+                        <flux:button :href="route('accounts.files', $account).'?path='.urlencode($folder->remote_path)"
+                            size="sm" variant="filled" icon="folder-open">
+                            {{ __('sync.manage_files') }}
+                        </flux:button>
                         <flux:button wire:click="syncNow({{ $folder->id }})" size="sm" variant="ghost" icon="arrow-path">
                             {{ __('sync.sync_now') }}
                         </flux:button>
