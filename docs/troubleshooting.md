@@ -24,6 +24,14 @@ times, then marks the account `error`. Check
 A 429 from Microsoft. RNV Sync respects `Retry-After` and retries with
 exponential backoff (5s/30s/5min). It resolves itself; no action needed.
 
+## "redirect_uri is not valid" on the Microsoft page
+
+You're using the default (rclone) client id, which doesn't allow RNV
+Sync's redirect. Register your own Microsoft Entra app and set
+`ONEDRIVE_CLIENT_ID`/`ONEDRIVE_CLIENT_SECRET` — full steps in
+[oauth.md](oauth.md). The redirect URI must equal
+`${APP_URL}/oauth/callback` exactly (scheme, host, port, path).
+
 ## Sign-in fails
 
 - "Session expired" → start again (CSRF state expired).

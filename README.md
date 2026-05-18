@@ -76,6 +76,7 @@ install: see [docs/installation.md](docs/installation.md).
 [Installation](docs/installation.md) ·
 [Configuration](docs/configuration.md) ·
 [Usage](docs/usage.md) ·
+[Microsoft OAuth setup](docs/oauth.md) ·
 [Troubleshooting](docs/troubleshooting.md) ·
 [FAQ](docs/faq.md) ·
 [Security](docs/security.md) ·
