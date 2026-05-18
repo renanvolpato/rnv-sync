@@ -35,6 +35,10 @@ it('reports cloud vs downloaded by real file presence', function () {
 });
 
 it('free() leaves a 0-byte cloud placeholder, keeping it visible', function () {
+    // Upload must succeed before the local copy may be dropped.
+    $this->mock(RcloneRunner::class)
+        ->shouldReceive('run')->andReturn(new RcloneResult(0, '', ''));
+
     $files = app(LocalFiles::class);
     $rel = 'Docs/a.txt';
     $local = $files->localPathFor($this->account, $rel);
@@ -46,6 +50,23 @@ it('free() leaves a 0-byte cloud placeholder, keeping it visible', function () {
     expect(File::exists($local))->toBeTrue()
         ->and(filesize($local))->toBe(0)
         ->and($files->status($this->account, $rel))->toBe('cloud');
+});
+
+it('free() never drops the local file when the upload fails (data-safety)', function () {
+    $this->mock(RcloneRunner::class)
+        ->shouldReceive('run')->andReturn(new RcloneResult(1, '', 'network down'));
+
+    $files = app(LocalFiles::class);
+    $rel = 'Docs/a.txt';
+    $local = $files->localPathFor($this->account, $rel);
+    File::ensureDirectoryExists(dirname($local));
+    File::put($local, 'real content');
+
+    expect(fn () => $files->free($this->account, $rel))
+        ->toThrow(RuntimeException::class);
+
+    // The user's real content is still on disk, untouched.
+    expect(File::get($local))->toBe('real content');
 });
 
 it('download() copies a file with rclone copyto to the physical path', function () {

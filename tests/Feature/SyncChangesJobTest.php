@@ -42,17 +42,25 @@ it('pushes real files only (skips placeholders) and pulls just kept files', func
         app(RcloneRunner::class), app(RcloneConfigGenerator::class)
     );
 
-    // 1) push: copy local -> remote with --min-size 1 (no placeholders)
+    // 1) push: copy local -> remote, --min-size 1b (skip 0-byte
+    //    placeholders only), --update (don't clobber newer cloud),
+    //    and the Vault/Trash excludes for the recursive scan.
     $push = $calls[0];
     expect($push[0])->toBe('copy')
         ->and($push[1])->toBe($this->folder->local_path)
-        ->and($push)->toContain('--min-size')->toContain('1');
+        ->and($push)->toContain('--min-size')->toContain('1b')
+        ->and($push)->toContain('--update')
+        ->and($push)->toContain('--exclude');
 
-    // 2) pull: copy remote -> local --files-from <list of real files>
+    // 2) pull: copy remote -> local --files-from <list of real files>,
+    //    --update, and crucially NO --exclude (rclone rejects
+    //    --files-from combined with any other filter).
     $pull = $calls[1];
     expect($pull[0])->toBe('copy')
         ->and($pull[2])->toBe($this->folder->local_path)
-        ->and($pull)->toContain('--files-from');
+        ->and($pull)->toContain('--files-from')
+        ->and($pull)->toContain('--update')
+        ->and($pull)->not->toContain('--exclude');
 
     expect($push)->not->toContain('--files-from'); // push is real-only
 });
