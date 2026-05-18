@@ -92,7 +92,16 @@
 
     {{-- History --}}
     <flux:card>
-        <flux:heading size="lg">{{ __('sync.history') }}</flux:heading>
+        <div class="flex items-center justify-between">
+            <flux:heading size="lg">{{ __('sync.history') }}</flux:heading>
+            @if ($history->total() > 0)
+                <flux:button wire:click="clearHistory"
+                    wire:confirm="{{ __('sync.clear_history_confirm') }}"
+                    size="sm" variant="ghost" icon="trash">
+                    {{ __('sync.clear_history') }}
+                </flux:button>
+            @endif
+        </div>
         <div class="mt-3 overflow-x-auto" wire:poll.10s>
             <table class="w-full text-sm">
                 <thead class="text-left text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">

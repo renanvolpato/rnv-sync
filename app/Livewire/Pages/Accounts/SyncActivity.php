@@ -47,6 +47,17 @@ class SyncActivity extends Component
         session()->flash('status', __('sync.queued'));
     }
 
+    /** Clear the sync history (keeps any run still in progress). */
+    public function clearHistory(): void
+    {
+        SyncHistory::where('account_id', $this->account->id)
+            ->where('status', '!=', 'running')
+            ->delete();
+
+        $this->resetPage();
+        session()->flash('status', __('sync.history_cleared'));
+    }
+
     /** Fully remove a folder from sync. Local files are left in place. */
     public function unsync(int $folderId): void
     {
