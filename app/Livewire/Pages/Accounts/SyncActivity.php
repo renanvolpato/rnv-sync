@@ -4,6 +4,7 @@ namespace App\Livewire\Pages\Accounts;
 
 use App\Jobs\MaterializePlaceholdersJob;
 use App\Jobs\StartSyncJob;
+use App\Jobs\SyncChangesJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
 use App\Models\SyncHistory;
@@ -40,9 +41,15 @@ class SyncActivity extends Component
         $folder = SyncFolder::where('id', $folderId)
             ->where('account_id', $this->account->id)->firstOrFail();
 
+        // on_demand: refresh the ☁ placeholder tree AND run the
+        // lightweight two-way change sync (push local edits, pull
+        // cloud edits) — this is the user's "fix it now" button when
+        // something didn't sync, so it must actually move data.
         $folder->sync_mode === 'bisync'
             ? StartSyncJob::dispatch($folder->id)
-            : MaterializePlaceholdersJob::dispatch($folder->id);
+            : MaterializePlaceholdersJob::withChain([
+                new SyncChangesJob($folder->id),
+            ])->dispatch($folder->id);
 
         session()->flash('status', __('sync.queued'));
     }

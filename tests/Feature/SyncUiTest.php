@@ -78,3 +78,23 @@ it('queues a manual sync now', function () {
 
     Queue::assertPushed(StartSyncJob::class);
 });
+
+it('manual sync of an on-demand folder actually pushes/pulls (recovery)', function () {
+    Queue::fake();
+    $folder = SyncFolder::factory()->create([
+        'account_id' => $this->account->id,
+        'sync_mode' => 'on_demand',
+        'is_active' => true,
+    ]);
+
+    Livewire::test(SyncActivity::class, ['account' => $this->account])
+        ->call('syncNow', $folder->id);
+
+    // Not just placeholders: the change sync must be chained so a
+    // "didn't sync" item is actually re-uploaded / re-downloaded.
+    Queue::assertPushed(MaterializePlaceholdersJob::class, function ($job) {
+        return collect($job->chained)->contains(
+            fn ($s) => str_contains($s, SyncChangesJob::class)
+        );
+    });
+});
