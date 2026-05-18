@@ -18,10 +18,20 @@ fi
 mkdir -p "${EXT_DIR}"
 cp install/nautilus/rnv-sync.py "${EXT_DIR}/rnv-sync.py"
 
+# Install our custom emblem icons (blue cloud / green check / sync).
+ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/emblems"
+mkdir -p "${ICON_DIR}"
+cp install/nautilus/icons/emblem-rnvsync-*.svg "${ICON_DIR}/"
+if [ ! -f "${HOME}/.local/share/icons/hicolor/index.theme" ] \
+   && [ -f /usr/share/icons/hicolor/index.theme ]; then
+  cp /usr/share/icons/hicolor/index.theme "${HOME}/.local/share/icons/hicolor/index.theme"
+fi
+gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+
 # Write the extension config (CLI path + account base dirs).
 php artisan rnvsync:nautilus-config
 
-# Reload Nautilus so the extension is picked up.
+# Reload Nautilus so the extension + icons are picked up.
 nautilus -q 2>/dev/null || true
 
 echo "Installed. Emblems appear in your RNV Sync folder; right-click for"

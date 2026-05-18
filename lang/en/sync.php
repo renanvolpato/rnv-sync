@@ -44,6 +44,7 @@ return [
     'run_error' => 'Error',
     'run_cancelled' => 'Cancelled',
 
+    'col_action' => 'Action',
     'col_when' => 'When',
     'col_status' => 'Status',
     'col_files' => 'Files',

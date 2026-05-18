@@ -74,12 +74,16 @@ class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProv
         path = _path_of(file)
         if not _in_base(path, cfg.get("bases", [])):
             return
+        # Custom emblems shipped by the installer (reliable + correct
+        # colors). Fall back to stock names if the theme lacks ours.
         if path.rstrip("/") in _pending(cfg):
-            file.add_emblem("emblem-synchronizing")  # ⟳ in progress
+            file.add_emblem("emblem-rnvsync-syncing")
+            file.add_emblem("emblem-synchronizing")
         elif _is_downloaded(path):
-            file.add_emblem("emblem-default")        # ✓ on this device
+            file.add_emblem("emblem-rnvsync-synced")
+            file.add_emblem("emblem-default")
         else:
-            file.add_emblem("emblem-web")            # ☁ online only
+            file.add_emblem("emblem-rnvsync-cloud")  # ☁ blue, online only
 
     def _run(self, action, path):
         cfg = _load()

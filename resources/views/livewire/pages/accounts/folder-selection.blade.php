@@ -27,6 +27,15 @@
     </div>
 
     <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-100 dark:divide-zinc-800" wire:poll.5s>
+        @if (! empty($folders))
+            <div class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/40">
+                <span class="w-4"></span>
+                <span class="w-4"></span>
+                <span class="flex-1">{{ __('accounts.col_name') }}</span>
+                <span>{{ __('cache.col_status') }}</span>
+                <span class="w-40 text-right">{{ __('sync.col_action') }}</span>
+            </div>
+        @endif
         @forelse ($folders as $folder)
             @php
                 $st = $folder['status'] ?? 'cloud';
@@ -58,8 +67,8 @@
                         <flux:icon.check-circle variant="solid" class="size-3.5" /> {{ __('cache.status_downloaded') }}
                     </span>
                 @else
-                    <span class="inline-flex items-center gap-1 text-zinc-500 dark:text-zinc-400 text-xs" title="{{ __('cache.tip_cloud') }}">
-                        <flux:icon.cloud class="size-3.5" /> {{ __('cache.status_cloud') }}
+                    <span class="inline-flex items-center gap-1 text-sky-600 dark:text-sky-500 text-xs" title="{{ __('cache.tip_cloud') }}">
+                        <flux:icon.cloud variant="solid" class="size-3.5" /> {{ __('cache.status_cloud') }}
                     </span>
                 @endif
 

@@ -92,9 +92,9 @@
                                         <span class="text-xs">{{ __('cache.status_downloaded') }}</span>
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400"
+                                    <span class="inline-flex items-center gap-1.5 text-sky-600 dark:text-sky-500"
                                         title="{{ __('cache.tip_cloud') }}">
-                                        <flux:icon.cloud class="size-4" />
+                                        <flux:icon.cloud variant="solid" class="size-4" />
                                         <span class="text-xs">{{ __('cache.status_cloud') }}</span>
                                     </span>
                                 @endif
