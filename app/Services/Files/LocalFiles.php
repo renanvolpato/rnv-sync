@@ -90,7 +90,16 @@ class LocalFiles
         $isDir = $this->remoteIsDir($account, $path);
         $verb = $isDir ? 'copy' : 'copyto';
 
-        $this->rclone->run([$verb, $remote, $local], ['timeout' => 3600]);
+        $result = $this->rclone->run([$verb, $remote, $local], ['timeout' => 3600]);
+
+        // Must throw on failure: the job relies on the exception to keep
+        // the ⟳ state, retry, and finally surface an explicit Erro
+        // instead of silently reverting to ☁ with the file missing.
+        if (! $result->successful()) {
+            throw new \RuntimeException(
+                'rclone download failed: '.trim($result->stderr) ?: 'unknown error'
+            );
+        }
     }
 
     /**
@@ -119,7 +128,15 @@ class LocalFiles
                 }
             }
             if ($hasRealFiles) {
-                $this->rclone->run(['copy', $local, $remote, '--ignore-size', '--checksum'], ['timeout' => 3600]);
+                $result = $this->rclone->run(['copy', $local, $remote, '--ignore-size', '--checksum'], ['timeout' => 3600]);
+                // Data-safety: never drop the local tree if the upload
+                // failed — that would lose the user's files. Throw so
+                // the job retries / surfaces an Erro instead.
+                if (! $result->successful()) {
+                    throw new \RuntimeException(
+                        'rclone upload failed (folder kept locally): '.(trim($result->stderr) ?: 'unknown error')
+                    );
+                }
             }
             File::deleteDirectory($local);
             File::ensureDirectoryExists($local);
@@ -130,7 +147,13 @@ class LocalFiles
         if (is_file($local)) {
             // size 0 = our placeholder/empty → don't overwrite cloud.
             if (filesize($local) > 0) {
-                $this->rclone->run(['copyto', $local, $remote], ['timeout' => 3600]);
+                $result = $this->rclone->run(['copyto', $local, $remote], ['timeout' => 3600]);
+                // Data-safety: keep the local file if the upload failed.
+                if (! $result->successful()) {
+                    throw new \RuntimeException(
+                        'rclone upload failed (file kept locally): '.(trim($result->stderr) ?: 'unknown error')
+                    );
+                }
             }
             File::delete($local);
             File::ensureDirectoryExists(dirname($local));

@@ -4,7 +4,7 @@ namespace App\Livewire\Pages\Accounts;
 
 use App\Jobs\DownloadPathJob;
 use App\Jobs\FreeOnlineJob;
-use App\Jobs\MaterializePlaceholdersJob;
+use App\Jobs\SyncChangesJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
 use App\Models\SyncHistory;
@@ -126,7 +126,10 @@ class FolderSelection extends Component
                 ],
             );
 
-            MaterializePlaceholdersJob::dispatch($folder->id);
+            // Light: kick an initial push/pull. Cloud placeholders fill
+            // in lazily while browsing (no heavy recursive scan, which
+            // also avoids the Personal Vault listing error).
+            SyncChangesJob::dispatch($folder->id);
         }
 
         // Folders the user unchecked → stop syncing (kept files stay).
