@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Jobs\MaterializePlaceholdersJob;
 use App\Jobs\StartSyncJob;
 use App\Models\SyncFolder;
 use App\Services\Sync\SyncService;
@@ -31,7 +32,11 @@ class ScheduledSyncCommand extends Command
         $folders = SyncFolder::query()->where('is_active', true)->get();
 
         foreach ($folders as $folder) {
-            StartSyncJob::dispatch($folder->id);
+            // On-demand folders only refresh their cloud placeholders;
+            // bisync would upload empty stubs and destroy cloud data.
+            $folder->sync_mode === 'bisync'
+                ? StartSyncJob::dispatch($folder->id)
+                : MaterializePlaceholdersJob::dispatch($folder->id);
         }
 
         $this->info("Queued {$folders->count()} folder sync(s).");

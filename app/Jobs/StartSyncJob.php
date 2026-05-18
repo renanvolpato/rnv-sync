@@ -54,6 +54,12 @@ class StartSyncJob implements ShouldQueue
             return;
         }
 
+        // Safety: never bisync an on-demand (placeholder) folder — it
+        // would upload empty 0-byte stubs and wipe cloud data.
+        if ($folder->sync_mode !== 'bisync') {
+            return;
+        }
+
         // SPEC F4.4 EARS: an account with >10 conflicts is auto-paused.
         if ($folder->account
             && app(ConflictsService::class)->isAccountPaused($folder->account)) {

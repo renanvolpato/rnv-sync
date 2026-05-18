@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Pages\Accounts;
 
-use App\Jobs\StartSyncJob;
+use App\Jobs\MaterializePlaceholdersJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
 use App\Models\SyncHistory;
@@ -83,12 +83,14 @@ class FolderSelection extends Component
                 ['account_id' => $this->account->id, 'remote_path' => $relative],
                 [
                     'local_path' => $mountBase.'/'.$relative,
-                    'sync_mode' => 'bisync',
+                    // On-demand: show everything as cloud placeholders,
+                    // download nothing until the user keeps it offline.
+                    'sync_mode' => 'on_demand',
                     'is_active' => true,
                 ],
             );
 
-            StartSyncJob::dispatch($folder->id); // starts syncing now
+            MaterializePlaceholdersJob::dispatch($folder->id);
         }
 
         // Folders the user unchecked → stop syncing (kept files stay).

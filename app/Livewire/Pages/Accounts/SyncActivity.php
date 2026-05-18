@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages\Accounts;
 
+use App\Jobs\MaterializePlaceholdersJob;
 use App\Jobs\StartSyncJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
@@ -32,7 +33,13 @@ class SyncActivity extends Component
 
     public function syncNow(int $folderId): void
     {
-        StartSyncJob::dispatch($folderId);
+        $folder = SyncFolder::where('id', $folderId)
+            ->where('account_id', $this->account->id)->firstOrFail();
+
+        $folder->sync_mode === 'bisync'
+            ? StartSyncJob::dispatch($folder->id)
+            : MaterializePlaceholdersJob::dispatch($folder->id);
+
         session()->flash('status', __('sync.queued'));
     }
 

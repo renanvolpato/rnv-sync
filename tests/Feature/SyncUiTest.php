@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\MaterializePlaceholdersJob;
 use App\Jobs\StartSyncJob;
 use App\Livewire\Pages\Accounts\FolderSelection;
 use App\Livewire\Pages\Accounts\SyncActivity;
@@ -41,8 +42,9 @@ it('saves folder selection and queues a sync within seconds (EARS F2.1)', functi
         'account_id' => $this->account->id,
         'remote_path' => 'Documents',
         'is_active' => true,
+        'sync_mode' => 'on_demand',
     ]);
-    Queue::assertPushed(StartSyncJob::class);
+    Queue::assertPushed(MaterializePlaceholdersJob::class);
 });
 
 it('unsyncs a folder (removes it) and pauses globally', function () {

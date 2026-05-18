@@ -3,13 +3,13 @@
 return [
     // Screen 1 — pick what to sync
     'select_folders' => 'Select folders to sync',
-    'select_folders_hint' => 'Tick the folders (and subfolders) you want to sync to this computer. They start syncing as soon as you save — no extra step.',
+    'select_folders_hint' => 'Tick folders (or open them and pick subfolders). They appear as cloud files (☁) — nothing is downloaded until you choose “Always keep on this device”.',
     'save_selection' => 'Sync these folders',
-    'folders_saved' => 'Syncing started for the selected folders.',
+    'folders_saved' => 'Folders added. They show as cloud files — keep items offline as needed.',
 
     // Screen 2 — synced folders
     'synced_title' => 'Synced folders',
-    'activity_subtitle' => 'Folders you chose to sync. They live as real files on this computer.',
+    'activity_subtitle' => 'Folders you track. Files show as cloud (☁) until you keep them on this device.',
     'folders' => 'Synced folders',
     'no_folders' => 'No folders selected yet. Use “Select folders to sync”.',
     'history' => 'Sync history',

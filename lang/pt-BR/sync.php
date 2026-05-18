@@ -3,13 +3,13 @@
 return [
     // Tela 1 — escolher o que sincronizar
     'select_folders' => 'Selecionar pastas para sincronizar',
-    'select_folders_hint' => 'Marque as pastas (e subpastas) que você quer sincronizar com este computador. Elas começam a sincronizar assim que você salvar — sem passo extra.',
+    'select_folders_hint' => 'Marque pastas (ou abra para escolher subpastas). Elas aparecem como arquivos na nuvem (☁) — nada é baixado até você escolher “Sempre manter neste dispositivo”.',
     'save_selection' => 'Sincronizar estas pastas',
-    'folders_saved' => 'Sincronização iniciada para as pastas selecionadas.',
+    'folders_saved' => 'Pastas adicionadas. Aparecem como arquivos na nuvem — mantenha itens offline conforme quiser.',
 
     // Tela 2 — pastas sincronizadas
     'synced_title' => 'Pastas sincronizadas',
-    'activity_subtitle' => 'Pastas que você escolheu sincronizar. Ficam como arquivos reais neste computador.',
+    'activity_subtitle' => 'Pastas que você acompanha. Os arquivos aparecem como nuvem (☁) até você manter neste dispositivo.',
     'folders' => 'Pastas sincronizadas',
     'no_folders' => 'Nenhuma pasta selecionada ainda. Use “Selecionar pastas para sincronizar”.',
     'history' => 'Histórico de sincronização',
