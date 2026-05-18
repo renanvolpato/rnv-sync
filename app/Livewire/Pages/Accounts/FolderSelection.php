@@ -146,6 +146,9 @@ class FolderSelection extends Component
         }
 
         $local = app(LocalFiles::class);
+        if ($entries !== []) {
+            $local->ensurePlaceholders($this->account, $entries);
+        }
         foreach ($entries as &$e) {
             $e['status'] = $local->status($this->account, $e['path']);
         }

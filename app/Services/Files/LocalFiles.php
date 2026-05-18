@@ -167,6 +167,28 @@ class LocalFiles
         return $created;
     }
 
+    /**
+     * Lightweight: ensure placeholders for entries the caller already
+     * listed (reuses the browse listing — no extra rclone call). Fills
+     * the tree cheaply as the user navigates, instead of one heavy
+     * recursive scan.
+     *
+     * @param  list<array{path:string,is_dir:bool}>  $entries
+     */
+    public function ensurePlaceholders(Account $account, array $entries): void
+    {
+        foreach ($entries as $e) {
+            $local = $this->localPathFor($account, $e['path']);
+
+            if ($e['is_dir']) {
+                File::ensureDirectoryExists($local);
+            } elseif (! file_exists($local)) {
+                File::ensureDirectoryExists(dirname($local));
+                File::put($local, ''); // cloud placeholder
+            }
+        }
+    }
+
     private function remoteIsDir(Account $account, string $path): bool
     {
         if ($path === '' || $path === '/') {

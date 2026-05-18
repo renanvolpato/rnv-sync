@@ -128,6 +128,12 @@ class FileBrowser extends Component
             $this->rcloneUnavailable = true;
         }
 
+        if ($this->physical && $entries !== []) {
+            // Fill placeholders for this folder lazily (cheap; no
+            // recursive scan) so cloud items show on disk too.
+            $local->ensurePlaceholders($this->account, $entries);
+        }
+
         foreach ($entries as &$entry) {
             $entry['status'] = $this->physical
                 ? $local->status($this->account, $entry['path'])
