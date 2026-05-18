@@ -173,7 +173,14 @@ class LocalFiles
         $remote = $account->remote_name.':'.ltrim($path, '/');
         // Big OneDrives can take minutes to enumerate recursively; this
         // runs in the queue (job timeout 1800s), so don't cap at 120s.
-        $result = $this->rclone->run(['lsjson', '-R', '--files-only=false', $remote], ['timeout' => 1700]);
+        // Skip the Personal Vault/Trash: rclone can't traverse the
+        // Vault and would abort the whole listing (→ 0 placeholders).
+        $result = $this->rclone->run([
+            'lsjson', '-R', '--files-only=false', $remote,
+            '--ignore-errors',
+            '--exclude', 'Cofre Pessoal/**', '--exclude', 'Personal Vault/**',
+            '--exclude', '.Trash-1000/**',
+        ], ['timeout' => 1700]);
 
         if (! $result->successful()) {
             return 0;

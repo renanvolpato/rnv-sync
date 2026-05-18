@@ -76,12 +76,13 @@ class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProv
             return
         # Custom emblems shipped by the installer (reliable + correct
         # colors). Fall back to stock names if the theme lacks ours.
+        # Exactly ONE emblem per item. Our installer ships the custom
+        # icons; if the theme somehow lacks one Nautilus just draws
+        # nothing for it (never a doubled badge).
         if path.rstrip("/") in _pending(cfg):
             file.add_emblem("emblem-rnvsync-syncing")
-            file.add_emblem("emblem-synchronizing")
         elif _is_downloaded(path):
             file.add_emblem("emblem-rnvsync-synced")
-            file.add_emblem("emblem-default")
         else:
             file.add_emblem("emblem-rnvsync-cloud")  # ☁ blue, online only
 

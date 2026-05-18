@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\MaterializePlaceholdersJob;
 use App\Jobs\StartSyncJob;
 use App\Jobs\SyncChangesJob;
 use App\Livewire\Pages\Accounts\FolderSelection;
@@ -44,7 +45,13 @@ it('saves folder selection and queues a sync within seconds (EARS F2.1)', functi
         'is_active' => true,
         'sync_mode' => 'on_demand',
     ]);
-    Queue::assertPushed(SyncChangesJob::class);
+    // save() mirrors the folder as ☁ placeholders first, then chains
+    // the lightweight two-way change sync.
+    Queue::assertPushed(MaterializePlaceholdersJob::class, function ($job) {
+        return collect($job->chained)->contains(function ($serialized) {
+            return str_contains($serialized, SyncChangesJob::class);
+        });
+    });
 });
 
 it('unsyncs a folder (removes it) and pauses globally', function () {
