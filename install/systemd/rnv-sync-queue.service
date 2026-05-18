@@ -1,13 +1,16 @@
 [Unit]
-Description=RNV Sync queue worker & scheduler
+Description=RNV Sync queue worker
 After=network.target
 
 [Service]
 Type=simple
 WorkingDirectory=@APP_DIR@
-ExecStart=/bin/bash -c '@PHP@ artisan queue:work --sleep=3 --tries=4 & while true; do @PHP@ artisan schedule:run; sleep 60; done'
+# Low footprint: --sleep keeps it idle-cheap; --max-time recycles the
+# worker hourly so a long-lived PHP process never bloats memory.
+ExecStart=@PHP@ artisan queue:work --sleep=3 --tries=4 --max-time=3600
 Restart=on-failure
 RestartSec=5
+Nice=10
 
 [Install]
 WantedBy=default.target

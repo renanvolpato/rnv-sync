@@ -50,12 +50,30 @@ php artisan migrate --force
 
 say "Installing systemd user services"
 mkdir -p "${HOME}/.config/systemd/user"
-for unit in rnv-sync-web rnv-sync-queue rnv-sync-reverb; do
+for unit in rnv-sync-web rnv-sync-queue rnv-sync-scheduler rnv-sync-reverb; do
   sed "s|@APP_DIR@|${APP_DIR}|g; s|@PHP@|$(command -v php)|g" \
     "install/systemd/${unit}.service" > "${HOME}/.config/systemd/user/${unit}.service"
 done
 systemctl --user daemon-reload
-systemctl --user enable --now rnv-sync-web rnv-sync-queue rnv-sync-reverb
+systemctl --user enable --now \
+  rnv-sync-web rnv-sync-queue rnv-sync-scheduler rnv-sync-reverb
+
+# Keep the services running after logout / across reboots, with no
+# open browser or terminal. enable-linger for one's own user is
+# allowed without root on logind systems; ignore failure otherwise.
+say "Enabling background autostart (linger)"
+loginctl enable-linger "$(whoami)" 2>/dev/null \
+  || say "Could not enable linger automatically — services still run while logged in."
+
+# GNOME Files integration (emblems + right-click Keep local / online).
+# Best-effort: a missing python3-nautilus must not abort the install.
+say "Installing the file-manager integration (optional)"
+bash install/nautilus/install.sh \
+  || say "File-manager integration skipped (install python3-nautilus, then re-run install/nautilus/install.sh)."
 
 say "Done. Open http://localhost:8080"
+# Give the web service a moment to bind before opening the browser.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  curl -fsS -o /dev/null http://127.0.0.1:8080 2>/dev/null && break || sleep 1
+done
 command -v xdg-open >/dev/null && xdg-open http://localhost:8080 || true

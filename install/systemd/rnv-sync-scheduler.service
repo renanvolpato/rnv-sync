@@ -1,0 +1,16 @@
+[Unit]
+Description=RNV Sync scheduler (background sync every 15 min, mount supervisor)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=@APP_DIR@
+# schedule:work is a tiny long-lived process: it sleeps and only fires
+# the due commands each minute (drives rnvsync:scheduled-sync etc.).
+ExecStart=@PHP@ artisan schedule:work
+Restart=on-failure
+RestartSec=5
+Nice=10
+
+[Install]
+WantedBy=default.target
