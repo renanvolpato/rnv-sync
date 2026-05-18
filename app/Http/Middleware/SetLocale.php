@@ -25,12 +25,31 @@ class SetLocale
         $available = config('rnvsync.available_locales');
 
         $locale = $this->fromSettings($available)
+            ?? $this->fromPreview($request, $available)
             ?? $this->fromBrowser($request, $available)
             ?? config('rnvsync.default_locale');
 
         app()->setLocale($locale);
 
         return $next($request);
+    }
+
+    /**
+     * Language picked on the setup wizard's first screen, before any
+     * user/settings exist. Kept in the session so a reload mid-setup
+     * stays in the chosen language.
+     *
+     * @param  list<string>  $available
+     */
+    private function fromPreview(Request $request, array $available): ?string
+    {
+        if (! $request->hasSession()) {
+            return null;
+        }
+
+        $preview = $request->session()->get('locale_preview');
+
+        return is_string($preview) && in_array($preview, $available, true) ? $preview : null;
     }
 
     /** @param list<string> $available */

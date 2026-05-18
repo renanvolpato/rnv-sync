@@ -17,15 +17,20 @@ it('redirects away from the wizard once setup is complete', function () {
     $this->get(route('setup.index'))->assertRedirect(route('dashboard'));
 });
 
-it('creates the panel user, stores settings and logs in', function () {
+it('picks language first, then creates the panel user and logs in', function () {
     Livewire::test(Wizard::class)
-        ->set('step', 2)
+        // Step 1: language is chosen up front and applied live.
+        ->set('language', 'pt-BR')
+        ->assertSet('language', 'pt-BR')
+        ->call('next')
+        ->assertSet('step', 2)
+        // Step 2: panel account.
         ->set('email', 'owner@example.com')
         ->set('password', 'a-very-long-password')
         ->set('password_confirmation', 'a-very-long-password')
         ->call('next')
-        ->set('language', 'pt-BR')
-        ->call('next')
+        ->assertSet('step', 3)
+        // Step 3: mount location.
         ->set('mount_base', '/home/user/RnvSync')
         ->call('finish')
         ->assertRedirect(route('dashboard'));
@@ -33,6 +38,14 @@ it('creates the panel user, stores settings and logs in', function () {
     expect(User::where('email', 'owner@example.com')->exists())->toBeTrue()
         ->and(auth()->check())->toBeTrue()
         ->and(app(SettingsRepository::class)->language())->toBe('pt-BR');
+});
+
+it('switches the wizard language live on the first screen', function () {
+    Livewire::test(Wizard::class)
+        ->set('language', 'pt-BR')
+        ->assertSee(__('wizard.welcome_title', [], 'pt-BR'))
+        ->set('language', 'en')
+        ->assertSee('Welcome to RNV Sync');
 });
 
 it('rejects a password shorter than 12 characters', function () {

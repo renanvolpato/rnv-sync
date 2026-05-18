@@ -12,16 +12,17 @@ use Livewire\Component;
 /**
  * First-run setup wizard (SPEC F1.2 / Key Screen 1).
  *
- * Four steps: Welcome → Create panel account → Language → Mount location.
- * Guarded by EnsureSetupComplete so it is only reachable before a user
- * exists.
+ * Language is chosen on the very first screen and applied immediately,
+ * so the whole wizard reads in the user's language. Steps:
+ *   1. Welcome + language   2. Create panel account   3. Mount location
+ * Guarded by EnsureSetupComplete; only reachable before a user exists.
  */
 #[Layout('components.layouts.guest')]
 class Wizard extends Component
 {
     public int $step = 1;
 
-    public const LAST_STEP = 4;
+    public const LAST_STEP = 3;
 
     public string $email = '';
 
@@ -35,22 +36,32 @@ class Wizard extends Component
 
     public function mount(SettingsRepository $settings): void
     {
+        // Best guess from browser/Accept-Language; the user can change it
+        // on the first screen and it switches live.
         $this->language = app()->getLocale();
         $this->mount_base = $settings->mountBase();
     }
 
+    /** Live language switch (wire:model.live) — re-renders translated. */
+    public function updatedLanguage(string $value): void
+    {
+        if (! in_array($value, config('rnvsync.available_locales'), true)) {
+            $this->language = config('rnvsync.default_locale');
+        }
+
+        app()->setLocale($this->language);
+        session()->put('locale_preview', $this->language);
+    }
+
     public function next(): void
     {
+        app()->setLocale($this->language);
+
         if ($this->step === 2) {
             $this->validate([
                 'email' => 'required|email',
                 'password' => 'required|string|min:'.config('rnvsync.defaults.password_min_length').'|confirmed',
             ]);
-        }
-
-        if ($this->step === 3) {
-            $this->validate(['language' => 'required|in:'.implode(',', config('rnvsync.available_locales'))]);
-            app()->setLocale($this->language);
         }
 
         $this->step = min($this->step + 1, self::LAST_STEP);
@@ -81,6 +92,7 @@ class Wizard extends Component
 
         Auth::login($user);
         session()->regenerate();
+        session()->forget('locale_preview');
 
         $this->redirectRoute('dashboard', navigate: true);
     }

@@ -11,8 +11,15 @@
     </div>
 
     <flux:card>
-        {{-- Step 1: Welcome --}}
+        {{-- Step 1: Welcome + language (chosen first, applied live) --}}
         @if ($step === 1)
+            <div class="flex justify-end mb-4">
+                <flux:select wire:model.live="language" size="sm" class="w-44" :label="__('settings.language')">
+                    <option value="en">English</option>
+                    <option value="pt-BR">Português (Brasil)</option>
+                </flux:select>
+            </div>
+
             <flux:heading size="lg">{{ __('wizard.welcome_title') }}</flux:heading>
             <flux:subheading class="mt-2">{{ __('wizard.welcome_body') }}</flux:subheading>
             <ul class="mt-4 space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -33,18 +40,8 @@
             </div>
         @endif
 
-        {{-- Step 3: Language --}}
+        {{-- Step 3: Mount location --}}
         @if ($step === 3)
-            <flux:heading size="lg">{{ __('wizard.language_title') }}</flux:heading>
-            <flux:subheading class="mb-4">{{ __('wizard.language_subtitle') }}</flux:subheading>
-            <flux:select wire:model="language" :label="__('settings.language')">
-                <option value="en">English</option>
-                <option value="pt-BR">Português (Brasil)</option>
-            </flux:select>
-        @endif
-
-        {{-- Step 4: Mount location --}}
-        @if ($step === 4)
             <flux:heading size="lg">{{ __('wizard.mount_title') }}</flux:heading>
             <flux:subheading class="mb-4">{{ __('wizard.mount_subtitle') }}</flux:subheading>
             <flux:input wire:model="mount_base" :label="__('settings.mount_base')" :description="__('wizard.mount_hint')" class="font-mono" />
