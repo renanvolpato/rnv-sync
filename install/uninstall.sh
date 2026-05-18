@@ -31,6 +31,7 @@ pkill -f "${APP_DIR}/rclone/rclone" 2>/dev/null || true
 
 say "Removing the GNOME Files integration"
 rm -f "${EXT_DIR}/rnv-sync.py"
+rm -f "${EXT_DIR}"/__pycache__/rnv-sync.*.pyc
 rm -f "${ICON_DIR}"/emblem-rnvsync-*.svg
 gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
 nautilus -q 2>/dev/null || true
