@@ -33,6 +33,7 @@ return [
     'tip_download_action' => 'Download and keep on this device (Keep local).',
     'physical_note' => 'Real files on disk under your sync folder. "Download" brings it to disk; "Free up space" removes the local copy (stays in OneDrive). No virtual drive.',
     'freed' => 'Space freed; file stays available online.',
+    'freeing' => 'Keeping online — uploading if needed, then freeing space…',
     'freed_all' => 'All cache freed (pinned files kept).',
     'pin_too_large' => 'This file is larger than the cache limit. Increase the cache size in Settings first.',
     'fod_note' => 'Files appear here on demand. "Keep offline" downloads and protects a file; "Free up space" removes the local copy.',

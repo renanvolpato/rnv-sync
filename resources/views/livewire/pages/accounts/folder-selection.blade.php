@@ -28,12 +28,11 @@
 
     <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-100 dark:divide-zinc-800" wire:poll.5s>
         @if (! empty($folders))
-            <div class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/40">
-                <span class="w-4"></span>
-                <span class="w-4"></span>
+            <div class="flex items-center gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/40">
+                <span class="w-8"></span>
                 <span class="flex-1">{{ __('accounts.col_name') }}</span>
-                <span>{{ __('cache.col_status') }}</span>
-                <span class="w-40 text-right">{{ __('sync.col_action') }}</span>
+                <span class="w-44 border-l border-zinc-200 dark:border-zinc-800 pl-3">{{ __('cache.col_status') }}</span>
+                <span class="w-52 border-l border-zinc-200 dark:border-zinc-800 pl-3 text-right">{{ __('sync.col_action') }}</span>
             </div>
         @endif
         @forelse ($folders as $folder)
@@ -42,55 +41,62 @@
                 $isDir = $folder['is_dir'];
             @endphp
             <div class="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
-                @if ($isDir)
-                    <flux:checkbox wire:model="selected" value="{{ $folder['path'] }}" />
-                    <flux:icon.folder class="size-4 text-sky-600 dark:text-sky-500 shrink-0" />
-                @else
-                    <span class="w-4"></span>
-                    <flux:icon.document class="size-4 text-zinc-400 shrink-0" />
-                @endif
+                <div class="w-8 flex items-center">
+                    @if ($isDir)
+                        <flux:checkbox wire:model="selected" value="{{ $folder['path'] }}" />
+                    @endif
+                </div>
 
-                @if ($isDir)
-                    <button wire:click="open('{{ addslashes($folder['name']) }}')"
-                        class="flex-1 truncate text-left hover:underline">{{ $folder['name'] }}</button>
-                @else
-                    <span class="flex-1 truncate">{{ $folder['name'] }}</span>
-                @endif
+                <div class="flex-1 min-w-0 flex items-center gap-2">
+                    <flux:icon :name="$isDir ? 'folder' : 'document'"
+                        class="size-4 shrink-0 {{ $isDir ? 'text-sky-600 dark:text-sky-500' : 'text-zinc-400' }}" />
+                    @if ($isDir)
+                        <button wire:click="open('{{ addslashes($folder['name']) }}')"
+                            class="truncate text-left hover:underline">{{ $folder['name'] }}</button>
+                    @else
+                        <span class="truncate">{{ $folder['name'] }}</span>
+                    @endif
+                </div>
 
-                {{-- offline/online status --}}
-                @if ($st === 'syncing')
-                    <span class="inline-flex items-center gap-1 text-sky-600 dark:text-sky-500 text-xs" title="{{ __('cache.tip_syncing') }}">
-                        <flux:icon.arrow-path class="size-3.5 animate-spin" /> {{ __('cache.status_syncing') }}
-                    </span>
-                @elseif ($st === 'downloaded')
-                    <span class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-500 text-xs" title="{{ __('cache.tip_downloaded') }}">
-                        <flux:icon.check-circle variant="solid" class="size-3.5" /> {{ __('cache.status_downloaded') }}
-                    </span>
-                @else
-                    <span class="inline-flex items-center gap-1 text-sky-600 dark:text-sky-500 text-xs" title="{{ __('cache.tip_cloud') }}">
-                        <flux:icon.cloud variant="solid" class="size-3.5" /> {{ __('cache.status_cloud') }}
-                    </span>
-                @endif
+                {{-- STATUS column --}}
+                <div class="w-44 border-l border-zinc-200 dark:border-zinc-800 pl-3">
+                    @if ($st === 'syncing')
+                        <span class="inline-flex items-center gap-1 text-sky-600 dark:text-sky-500 text-xs" title="{{ __('cache.tip_syncing') }}">
+                            <flux:icon.arrow-path class="size-3.5 animate-spin" /> {{ __('cache.status_syncing') }}
+                        </span>
+                    @elseif ($st === 'downloaded')
+                        <span class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-500 text-xs" title="{{ __('cache.tip_downloaded') }}">
+                            <flux:icon.check-circle variant="solid" class="size-3.5" /> {{ __('cache.status_downloaded') }}
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1 text-sky-600 dark:text-sky-500 text-xs" title="{{ __('cache.tip_cloud') }}">
+                            <flux:icon.cloud variant="solid" class="size-3.5" /> {{ __('cache.status_cloud') }}
+                        </span>
+                    @endif
+                </div>
 
-                {{-- toggle offline/online --}}
-                @if ($st === 'syncing')
-                    <span class="text-xs text-zinc-400 w-28 text-right">{{ __('common.loading') }}</span>
-                @elseif ($st === 'downloaded')
-                    <flux:button wire:click="freeOnline('{{ addslashes($folder['name']) }}')" size="xs" variant="ghost" icon="cloud">
-                        {{ __('cache.free') }}
-                    </flux:button>
-                @else
-                    <flux:button wire:click="keepOffline('{{ addslashes($folder['name']) }}')" size="xs" variant="ghost" icon="arrow-down-tray">
-                        {{ __('cache.download') }}
-                    </flux:button>
-                @endif
-
-                @if ($isDir)
-                    <flux:button wire:click="open('{{ addslashes($folder['name']) }}')"
-                        size="xs" variant="ghost" icon="chevron-right">
-                        {{ __('sync.open_subfolders') }}
-                    </flux:button>
-                @endif
+                {{-- ACTIONS column --}}
+                <div class="w-52 border-l border-zinc-200 dark:border-zinc-800 pl-3 flex items-center justify-end gap-1">
+                    @if ($st === 'syncing')
+                        <span class="text-xs text-zinc-400">{{ __('common.loading') }}</span>
+                    @elseif ($st === 'downloaded')
+                        <span title="{{ __('cache.tip_free_action') }}">
+                            <flux:button wire:click="freeOnline('{{ addslashes($folder['name']) }}')" size="xs" variant="ghost" icon="cloud">
+                                {{ __('cache.free') }}
+                            </flux:button>
+                        </span>
+                    @else
+                        <span title="{{ __('cache.tip_download_action') }}">
+                            <flux:button wire:click="keepOffline('{{ addslashes($folder['name']) }}')" size="xs" variant="ghost" icon="arrow-down-tray">
+                                {{ __('cache.download') }}
+                            </flux:button>
+                        </span>
+                    @endif
+                    @if ($isDir)
+                        <flux:button wire:click="open('{{ addslashes($folder['name']) }}')"
+                            size="xs" variant="ghost" icon="chevron-right" />
+                    @endif
+                </div>
             </div>
         @empty
             <div class="p-10 text-center text-sm text-zinc-500 dark:text-zinc-400">

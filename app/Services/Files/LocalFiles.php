@@ -84,15 +84,33 @@ class LocalFiles
     }
 
     /**
-     * "Free up space": delete the local copy but leave a 0-byte
-     * placeholder so the item still shows (as cloud) in the file
-     * manager. The file stays in OneDrive.
+     * "Keep online": make sure the content is safely in OneDrive, then
+     * drop the local copy (leaving a 0-byte placeholder).
+     *
+     * Data-safety: a real local file/folder that the user created or
+     * edited is UPLOADED first. A 0-byte file is treated as our
+     * placeholder and never uploaded (that would overwrite the real
+     * cloud file with nothing).
      */
     public function free(Account $account, string $path): void
     {
+        $this->configGenerator->regenerate();
+
         $local = $this->localPathFor($account, $path);
+        $remote = $account->remote_name.':'.ltrim($path, '/');
 
         if (is_dir($local)) {
+            // Upload any real files in the tree, then placeholder it.
+            $hasRealFiles = false;
+            foreach (File::allFiles($local) as $f) {
+                if ($f->getSize() > 0) {
+                    $hasRealFiles = true;
+                    break;
+                }
+            }
+            if ($hasRealFiles) {
+                $this->rclone->run(['copy', $local, $remote, '--ignore-size', '--checksum'], ['timeout' => 3600]);
+            }
             File::deleteDirectory($local);
             File::ensureDirectoryExists($local);
 
@@ -100,6 +118,10 @@ class LocalFiles
         }
 
         if (is_file($local)) {
+            // size 0 = our placeholder/empty → don't overwrite cloud.
+            if (filesize($local) > 0) {
+                $this->rclone->run(['copyto', $local, $remote], ['timeout' => 3600]);
+            }
             File::delete($local);
             File::ensureDirectoryExists(dirname($local));
             File::put($local, ''); // cloud placeholder (0 bytes)

@@ -33,6 +33,7 @@ return [
     'tip_download_action' => 'Baixar e manter neste dispositivo (Manter Local).',
     'physical_note' => 'Arquivos reais no disco, na sua pasta de sincronização. "Baixar" traz para o disco; "Liberar espaço" remove a cópia local (continua no OneDrive). Sem unidade virtual.',
     'freed' => 'Espaço liberado; o arquivo continua disponível online.',
+    'freeing' => 'Mantendo online — enviando se necessário e liberando espaço…',
     'freed_all' => 'Todo o cache liberado (arquivos fixados mantidos).',
     'pin_too_large' => 'Este arquivo é maior que o limite do cache. Aumente o tamanho do cache nas Configurações primeiro.',
     'fod_note' => 'Os arquivos aparecem aqui sob demanda. "Manter offline" baixa e protege o arquivo; "Liberar espaço" remove a cópia local.',

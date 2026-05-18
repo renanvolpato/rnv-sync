@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Jobs\DownloadPathJob;
+use App\Jobs\FreeOnlineJob;
 use App\Models\Account;
 use App\Services\Files\LocalFiles;
 use App\Services\Files\PendingOps;
@@ -39,7 +40,8 @@ class FsActionCommand extends Command
                     PendingOps::mark($abs); // show "syncing"
                     DownloadPathJob::dispatch($account->id, $rel);
                 } elseif ($action === 'free') {
-                    $files->free($account, $rel);
+                    PendingOps::mark($abs); // upload-if-needed then drop
+                    FreeOnlineJob::dispatch($account->id, $rel);
                 } else {
                     $this->error("Unknown action: {$action}");
 

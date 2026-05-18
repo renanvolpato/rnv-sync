@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Accounts;
 
 use App\Jobs\DownloadPathJob;
+use App\Jobs\FreeOnlineJob;
 use App\Jobs\MaterializePlaceholdersJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
@@ -72,14 +73,14 @@ class FolderSelection extends Component
         $this->dispatch('toast', type: 'success', message: __('cache.pinning'));
     }
 
-    /** Free up space (becomes online-only). */
+    /** Keep online: upload-if-needed then drop local (background). */
     public function freeOnline(string $name): void
     {
-        app(LocalFiles::class)->free(
-            $this->account,
-            trim($this->path.'/'.$name, '/'),
-        );
-        $this->dispatch('toast', type: 'success', message: __('cache.freed'));
+        $full = trim($this->path.'/'.$name, '/');
+        $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+        PendingOps::mark($local);
+        FreeOnlineJob::dispatch($this->account->id, $full);
+        $this->dispatch('toast', type: 'success', message: __('cache.freeing'));
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Accounts;
 
 use App\Jobs\DownloadPathJob;
+use App\Jobs\FreeOnlineJob;
 use App\Jobs\WarmCacheJob;
 use App\Models\Account;
 use App\Services\Accounts\AccountsService;
@@ -79,14 +80,18 @@ class FileBrowser extends Component
         $full = trim($this->path.'/'.$name, '/');
 
         if ($this->physical) {
-            app(LocalFiles::class)->free($this->account, $full);
+            // Upload-if-needed then drop local, in the background
+            // (shows the syncing state; never loses a new local file).
+            $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+            PendingOps::mark($local);
+            FreeOnlineJob::dispatch($this->account->id, $full);
         } else {
             $cache = app(CacheService::class);
             $cache->unpin($this->account, $full);
             $cache->freeUpSpace($this->account, $full);
         }
 
-        $this->dispatch('toast', type: 'success', message: __('cache.freed'));
+        $this->dispatch('toast', type: 'success', message: __('cache.freeing'));
     }
 
     public function freeAll(): void
