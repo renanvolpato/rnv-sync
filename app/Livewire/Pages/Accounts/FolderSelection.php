@@ -42,10 +42,12 @@ class FolderSelection extends Component
                 continue;
             }
 
+            $relative = ltrim((string) $path, '/');
+
             $folder = SyncFolder::updateOrCreate(
-                ['account_id' => $this->account->id, 'remote_path' => $path],
+                ['account_id' => $this->account->id, 'remote_path' => $relative],
                 [
-                    'local_path' => $mountBase.$path,
+                    'local_path' => $mountBase.'/'.$relative,
                     'sync_mode' => 'bisync',
                     'is_active' => true,
                 ],
