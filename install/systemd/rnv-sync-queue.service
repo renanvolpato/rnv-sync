@@ -8,7 +8,7 @@ WorkingDirectory=@APP_DIR@
 # Low footprint: --sleep keeps it idle-cheap; --max-time recycles the
 # worker hourly so a long-lived PHP process never bloats memory.
 ExecStart=@PHP@ artisan queue:work --sleep=3 --tries=4 --max-time=3600
-Restart=on-failure
+Restart=always
 RestartSec=5
 Nice=10
 

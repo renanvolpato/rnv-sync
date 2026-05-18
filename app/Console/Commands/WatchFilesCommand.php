@@ -43,13 +43,18 @@ class WatchFilesCommand extends Command
 
     public function handle(): int
     {
-        if (Process::run(['bash', '-lc', 'command -v inotifywait'])->failed()) {
-            $this->error('inotify-tools (inotifywait) is not installed — real-time '
-                .'sync is off. Install it and restart rnv-sync-watch. '
-                .'The 15-minute scheduled sync still runs.');
-            sleep(60); // avoid a tight systemd restart loop
-
-            return self::FAILURE;
+        // Wait quietly (no crash-loop) until inotify-tools is present;
+        // re-check hourly so real-time sync self-activates once the
+        // user installs it — no reboot or manual restart needed.
+        $warned = false;
+        while (Process::run(['bash', '-lc', 'command -v inotifywait'])->failed()) {
+            if (! $warned) {
+                $this->warn('inotify-tools (inotifywait) not installed — '
+                    .'real-time sync is paused. The 15-minute scheduled '
+                    .'sync still runs. Will auto-start once it is installed.');
+                $warned = true;
+            }
+            sleep(3600);
         }
 
         // Long-lived: re-evaluate the folder set and (re)attach the

@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 WorkingDirectory=@APP_DIR@
 ExecStart=@PHP@ artisan reverb:start --host=127.0.0.1 --port=8081
-Restart=on-failure
+Restart=always
 RestartSec=5
 
 [Install]
