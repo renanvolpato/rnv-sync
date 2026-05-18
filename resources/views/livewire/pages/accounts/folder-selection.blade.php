@@ -1,7 +1,14 @@
 <div>
-    <flux:button :href="route('dashboard')" variant="ghost" size="sm" icon="arrow-left" class="mb-4">
-        {{ __('common.back') }}
-    </flux:button>
+    @if ($path !== '')
+        {{-- Inside a subfolder: go up one level instead of leaving. --}}
+        <flux:button wire:click="goUp" variant="ghost" size="sm" icon="arrow-left" class="mb-4">
+            {{ __('common.back') }}
+        </flux:button>
+    @else
+        <flux:button :href="route('dashboard')" variant="ghost" size="sm" icon="arrow-left" class="mb-4">
+            {{ __('common.back') }}
+        </flux:button>
+    @endif
 
     <flux:heading size="xl">{{ __('sync.select_folders') }}</flux:heading>
     <flux:subheading class="mb-4">{{ __('sync.select_folders_hint') }}</flux:subheading>

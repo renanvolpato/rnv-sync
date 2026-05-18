@@ -52,6 +52,13 @@ class FolderSelection extends Component
         $this->path = trim($path, '/');
     }
 
+    /** Up one folder level (used by the back button inside a subfolder). */
+    public function goUp(): void
+    {
+        $parent = trim((string) dirname($this->path), '/.');
+        $this->path = $parent === '' ? '' : $parent;
+    }
+
     /**
      * @return list<array{label:string,path:string}>
      */
