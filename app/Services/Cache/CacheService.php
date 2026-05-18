@@ -100,18 +100,27 @@ class CacheService
             return false;
         }
 
+        // Record the policy immediately (fast). The actual download is
+        // done in the background by WarmCacheJob so the UI never blocks
+        // (a pinned folder can be huge).
         FilePolicy::updateOrCreate(
             ['account_id' => $account->id, 'path' => $path],
             ['is_directory' => $isDir, 'policy' => 'always_offline'],
         );
 
-        // Populate the cache now (read-through the remote).
+        return true;
+    }
+
+    /**
+     * Download a pinned path into the VFS cache. Runs inside the queue
+     * worker (WarmCacheJob), never in a web request.
+     */
+    public function warm(Account $account, string $path): void
+    {
         $this->rclone->run(
             ['copy', $account->remote_name.':'.ltrim($path, '/'), $this->cachePathFor($account, $path)],
-            ['timeout' => 600],
+            ['timeout' => 3600],
         );
-
-        return true;
     }
 
     public function unpin(Account $account, string $path): void

@@ -75,13 +75,25 @@
                             <td class="px-4 py-2.5">
                                 @switch($entry['status'])
                                     @case('pinned')
-                                        <flux:badge size="sm" color="sky" icon="bookmark">{{ __('cache.status_pinned') }}</flux:badge>
+                                        <span class="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500"
+                                            title="{{ __('cache.tip_pinned') }}">
+                                            <flux:icon.check-circle variant="solid" class="size-4" />
+                                            <span class="text-xs">{{ __('cache.status_pinned') }}</span>
+                                        </span>
                                         @break
                                     @case('cached')
-                                        <flux:badge size="sm" color="emerald" icon="check">{{ __('cache.status_cached') }}</flux:badge>
+                                        <span class="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500"
+                                            title="{{ __('cache.tip_cached') }}">
+                                            <flux:icon.check-circle class="size-4" />
+                                            <span class="text-xs">{{ __('cache.status_cached') }}</span>
+                                        </span>
                                         @break
                                     @default
-                                        <flux:badge size="sm" color="zinc" icon="cloud">{{ __('cache.status_online') }}</flux:badge>
+                                        <span class="inline-flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400"
+                                            title="{{ __('cache.tip_online') }}">
+                                            <flux:icon.cloud class="size-4" />
+                                            <span class="text-xs">{{ __('cache.status_online') }}</span>
+                                        </span>
                                 @endswitch
                             </td>
                             <td class="px-4 py-2.5 text-right text-zinc-500 dark:text-zinc-400 font-mono text-xs">
@@ -89,18 +101,24 @@
                             </td>
                             <td class="px-4 py-2.5 text-right whitespace-nowrap">
                                 @if ($entry['status'] === 'pinned')
-                                    <flux:button wire:click="unpin('{{ addslashes($entry['name']) }}')" size="xs" variant="ghost">
-                                        {{ __('cache.unpin') }}
-                                    </flux:button>
+                                    <span title="{{ __('cache.tip_unpin_action') }}">
+                                        <flux:button wire:click="unpin('{{ addslashes($entry['name']) }}')" size="xs" variant="ghost" icon="cloud">
+                                            {{ __('cache.unpin') }}
+                                        </flux:button>
+                                    </span>
                                 @else
-                                    <flux:button wire:click="pin('{{ addslashes($entry['name']) }}', {{ $entry['is_dir'] ? 'true' : 'false' }}, {{ $entry['size'] }})" size="xs" variant="ghost" icon="bookmark">
-                                        {{ __('cache.pin') }}
-                                    </flux:button>
+                                    <span title="{{ __('cache.tip_pin_action') }}">
+                                        <flux:button wire:click="pin('{{ addslashes($entry['name']) }}', {{ $entry['is_dir'] ? 'true' : 'false' }}, {{ $entry['size'] }})" size="xs" variant="ghost" icon="check-circle">
+                                            {{ __('cache.pin') }}
+                                        </flux:button>
+                                    </span>
                                 @endif
                                 @if ($entry['status'] === 'cached')
-                                    <flux:button wire:click="freeUp('{{ addslashes($entry['name']) }}')" size="xs" variant="ghost" icon="trash">
-                                        {{ __('cache.free') }}
-                                    </flux:button>
+                                    <span title="{{ __('cache.tip_free_action') }}">
+                                        <flux:button wire:click="freeUp('{{ addslashes($entry['name']) }}')" size="xs" variant="ghost" icon="trash">
+                                            {{ __('cache.free') }}
+                                        </flux:button>
+                                    </span>
                                 @endif
                             </td>
                         </tr>

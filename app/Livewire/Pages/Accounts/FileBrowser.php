@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages\Accounts;
 
+use App\Jobs\WarmCacheJob;
 use App\Models\Account;
 use App\Services\Accounts\AccountsService;
 use App\Services\Cache\CacheService;
@@ -52,7 +53,10 @@ class FileBrowser extends Component
             return;
         }
 
-        $this->dispatch('toast', type: 'success', message: __('cache.pinned'));
+        // Download in the background — the UI returns immediately.
+        WarmCacheJob::dispatch($this->account->id, $full);
+
+        $this->dispatch('toast', type: 'success', message: __('cache.pinning'));
     }
 
     public function unpin(string $name, CacheService $cache): void
