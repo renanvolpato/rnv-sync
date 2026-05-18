@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\Account;
+use App\Services\Files\PendingOps;
 use App\Services\Settings\SettingsRepository;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -31,6 +32,7 @@ class NautilusConfigCommand extends Command
             'php' => PHP_BINARY,
             'artisan' => base_path('artisan'),
             'bases' => $bases,
+            'pending' => PendingOps::file(),
         ];
 
         $dir = ($_SERVER['HOME'] ?? sys_get_temp_dir()).'/.config/rnv-sync';

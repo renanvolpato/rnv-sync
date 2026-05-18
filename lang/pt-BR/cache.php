@@ -25,6 +25,8 @@ return [
     // Modo físico
     'status_downloaded' => 'Disponível neste dispositivo',
     'status_cloud' => 'Disponível quando online',
+    'status_syncing' => 'Sincronizando…',
+    'tip_syncing' => 'Em andamento — baixando ou liberando este item.',
     'tip_downloaded' => 'Baixado neste dispositivo — arquivo real no disco.',
     'tip_cloud' => 'Apenas no OneDrive — ainda não baixado.',
     'download' => 'Sempre manter neste dispositivo',

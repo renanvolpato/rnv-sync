@@ -8,6 +8,7 @@ use App\Models\Account;
 use App\Services\Accounts\AccountsService;
 use App\Services\Cache\CacheService;
 use App\Services\Files\LocalFiles;
+use App\Services\Files\PendingOps;
 use App\Services\Settings\SettingsRepository;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -54,6 +55,8 @@ class FileBrowser extends Component
         $full = trim($this->path.'/'.$name, '/');
 
         if ($this->physical) {
+            $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+            PendingOps::mark($local); // show "syncing" now
             DownloadPathJob::dispatch($this->account->id, $full);
             $this->dispatch('toast', type: 'success', message: __('cache.pinning'));
 

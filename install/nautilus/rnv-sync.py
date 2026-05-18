@@ -49,6 +49,15 @@ def _is_downloaded(path):
         return False
 
 
+def _pending(cfg):
+    try:
+        with open(cfg.get("pending", ""), "r") as fh:
+            data = json.load(fh)
+            return set(data) if isinstance(data, list) else set()
+    except Exception:
+        return set()
+
+
 class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProvider):
 
     def update_file_info(self, file):
@@ -56,10 +65,12 @@ class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProv
         path = _path_of(file)
         if not _in_base(path, cfg.get("bases", [])):
             return
-        if _is_downloaded(path):
-            file.add_emblem("emblem-default")        # ✓ green check
+        if path.rstrip("/") in _pending(cfg):
+            file.add_emblem("emblem-synchronizing")  # ⟳ in progress
+        elif _is_downloaded(path):
+            file.add_emblem("emblem-default")        # ✓ on this device
         else:
-            file.add_emblem("emblem-synchronizing")  # ☁ cloud
+            file.add_emblem("emblem-web")            # ☁ online only
 
     def _run(self, action, path):
         cfg = _load()
@@ -68,6 +79,16 @@ class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProv
         subprocess.Popen(
             [cfg.get("php", "php"), cfg["artisan"], "rnvsync:fs", action, path]
         )
+
+    def _refresh(self, files):
+        # Force Nautilus to re-read emblems so the state updates without
+        # a manual refresh. It will reflect "syncing" immediately and the
+        # final state on the next poll.
+        for f in files:
+            try:
+                f.invalidate_extension_info()
+            except Exception:
+                pass
 
     def get_file_items(self, *args):
         # Nautilus 4 passes (files); Nautilus 3 passes (window, files).
@@ -84,8 +105,11 @@ class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProv
             label=("Sempre manter neste dispositivo (RNV Sync)" if any_cloud else "Liberar espaço (RNV Sync)"),
         )
         action = "download" if any_cloud else "free"
-        menu.connect(
-            "activate",
-            lambda _m: [self._run(action, p) for p in targets],
-        )
+
+        def _activate(_m, fs=files, paths=targets):
+            for p in paths:
+                self._run(action, p)
+            self._refresh(fs)
+
+        menu.connect("activate", _activate)
         return [menu]

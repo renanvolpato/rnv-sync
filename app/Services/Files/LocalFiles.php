@@ -35,10 +35,14 @@ class LocalFiles
         return $this->baseDir($account).'/'.ltrim($path, '/');
     }
 
-    /** downloaded = real file present (size > 0); else cloud-only. */
+    /** syncing (op in flight) → downloaded (real file) → cloud-only. */
     public function status(Account $account, string $path): string
     {
         $local = $this->localPathFor($account, $path);
+
+        if (PendingOps::has($local)) {
+            return 'syncing';
+        }
 
         if (is_dir($local)) {
             return 'downloaded';

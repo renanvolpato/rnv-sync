@@ -36,7 +36,7 @@
         @endforeach
     </div>
 
-    <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+    <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden" wire:poll.5s>
         @if ($rcloneUnavailable)
             <div class="p-10 text-center">
                 <flux:icon.exclamation-triangle class="size-10 mx-auto text-amber-500" />
@@ -60,7 +60,10 @@
                 </thead>
                 <tbody>
                     @foreach ($entries as $entry)
-                        @php $down = $isDownloaded($entry['status']); @endphp
+                        @php
+                            $syncing = $entry['status'] === 'syncing';
+                            $down = $isDownloaded($entry['status']);
+                        @endphp
                         <tr class="border-b border-zinc-100 dark:border-zinc-800/60 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
                             <td class="px-4 py-2.5">
                                 @if ($entry['is_dir'])
@@ -76,7 +79,13 @@
                                 @endif
                             </td>
                             <td class="px-4 py-2.5">
-                                @if ($down)
+                                @if ($syncing)
+                                    <span class="inline-flex items-center gap-1.5 text-sky-600 dark:text-sky-500"
+                                        title="{{ __('cache.tip_syncing') }}">
+                                        <flux:icon.arrow-path class="size-4 animate-spin" />
+                                        <span class="text-xs">{{ __('cache.status_syncing') }}</span>
+                                    </span>
+                                @elseif ($down)
                                     <span class="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500"
                                         title="{{ __('cache.tip_downloaded') }}">
                                         <flux:icon.check-circle variant="solid" class="size-4" />
@@ -94,7 +103,9 @@
                                 {{ $entry['is_dir'] ? '—' : Bytes::human($entry['size']) }}
                             </td>
                             <td class="px-4 py-2.5 text-right whitespace-nowrap">
-                                @if ($down)
+                                @if ($syncing)
+                                    <span class="text-xs text-zinc-400">{{ __('common.loading') }}</span>
+                                @elseif ($down)
                                     <span title="{{ __('cache.tip_free_action') }}">
                                         <flux:button wire:click="free('{{ addslashes($entry['name']) }}')" size="xs" variant="ghost" icon="cloud">
                                             {{ __('cache.free') }}

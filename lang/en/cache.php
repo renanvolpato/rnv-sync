@@ -25,6 +25,8 @@ return [
     // Physical mode
     'status_downloaded' => 'Available on this device',
     'status_cloud' => 'Available when online',
+    'status_syncing' => 'Syncing…',
+    'tip_syncing' => 'In progress — downloading or freeing this item.',
     'tip_downloaded' => 'Downloaded to this device — a real file on disk.',
     'tip_cloud' => 'In OneDrive only — not downloaded yet.',
     'download' => 'Always keep on this device',

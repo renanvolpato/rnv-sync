@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Jobs\DownloadPathJob;
 use App\Models\Account;
 use App\Services\Files\LocalFiles;
+use App\Services\Files\PendingOps;
 use App\Services\Settings\SettingsRepository;
 use Illuminate\Console\Command;
 
@@ -34,11 +35,16 @@ class FsActionCommand extends Command
             if ($abs === $base || str_starts_with($abs, $base.'/')) {
                 $rel = ltrim(substr($abs, strlen($base)), '/');
 
-                match ($action) {
-                    'download' => DownloadPathJob::dispatch($account->id, $rel),
-                    'free' => $files->free($account, $rel),
-                    default => $this->error("Unknown action: {$action}"),
-                };
+                if ($action === 'download') {
+                    PendingOps::mark($abs); // show "syncing"
+                    DownloadPathJob::dispatch($account->id, $rel);
+                } elseif ($action === 'free') {
+                    $files->free($account, $rel);
+                } else {
+                    $this->error("Unknown action: {$action}");
+
+                    return self::FAILURE;
+                }
 
                 $this->info(ucfirst($action)." queued for: {$rel}");
 
