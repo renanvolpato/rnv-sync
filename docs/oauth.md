@@ -48,6 +48,31 @@ Always open the panel at the URL in `APP_URL`. If you change the port,
 update `APP_URL` **and** add the matching redirect URI to the app
 registration — Microsoft requires an exact match.
 
+## "It signs me in as a guest of a work tenant" (`name#EXT#@company`)
+
+If your personal Microsoft account shows up as
+`you_gmail.com#EXT#@somecompany` and is forced through that company's
+MFA/Authenticator, the sign-in resolved into a **work tenant as a
+guest** (often the tenant where the app was registered).
+
+Fixes:
+
+1. App registration → **Authentication** → *Supported account types* =
+   **Accounts in any organizational directory and personal Microsoft
+   accounts**. A single-tenant/org-only app pulls personal accounts in
+   as guests.
+2. For a **personal** OneDrive, force the consumer endpoint so the
+   personal identity is used directly (never a work-tenant guest):
+
+   ```dotenv
+   ONEDRIVE_TENANT=consumers
+   ```
+
+   Use `common` for "work + personal", `organizations` or a tenant
+   id/domain for work/school only. Run `php artisan config:clear` after
+   changing it, then start the sign-in again (use "Outras opções" /
+   another account on the Microsoft screen if it remembers the guest).
+
 ## Multiple redirect URIs
 
 You can register several redirect URIs on the same app (e.g.

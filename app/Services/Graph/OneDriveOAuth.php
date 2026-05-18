@@ -33,7 +33,20 @@ class OneDriveOAuth
             'state' => $state,
         ]);
 
-        return config('rnvsync.oauth.authorize_url').'?'.$params;
+        return $this->endpoint('authorize').'?'.$params;
+    }
+
+    /**
+     * Build a tenant-aware Microsoft identity endpoint. The tenant
+     * segment (common / consumers / organizations / tenant id) controls
+     * whether a personal account is used directly or pulled into a work
+     * tenant as a guest.
+     */
+    private function endpoint(string $type): string
+    {
+        $tenant = trim((string) config('rnvsync.oauth.tenant', 'common')) ?: 'common';
+
+        return "https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/{$type}";
     }
 
     public function newState(): string
@@ -55,7 +68,7 @@ class OneDriveOAuth
      */
     public function exchangeCode(string $code): array
     {
-        $response = Http::asForm()->post(config('rnvsync.oauth.token_url'), [
+        $response = Http::asForm()->post($this->endpoint('token'), [
             'client_id' => config('rnvsync.oauth.client_id'),
             'client_secret' => config('rnvsync.oauth.client_secret') ?: null,
             'redirect_uri' => $this->redirectUri(),
@@ -97,7 +110,7 @@ class OneDriveOAuth
             return false;
         }
 
-        $response = Http::asForm()->post(config('rnvsync.oauth.token_url'), [
+        $response = Http::asForm()->post($this->endpoint('token'), [
             'client_id' => config('rnvsync.oauth.client_id'),
             'client_secret' => config('rnvsync.oauth.client_secret') ?: null,
             'redirect_uri' => $this->redirectUri(),

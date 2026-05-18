@@ -47,8 +47,15 @@ return [
     'oauth' => [
         'client_id' => env('ONEDRIVE_CLIENT_ID', 'b15665d9-eda6-4092-8539-0eec376afd59'),
         'client_secret' => env('ONEDRIVE_CLIENT_SECRET', ''),
-        'authorize_url' => 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-        'token_url' => 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+
+        // Microsoft identity "tenant" segment:
+        //  - common      → work/school AND personal (default)
+        //  - consumers   → personal Microsoft accounts only (OneDrive
+        //                   Personal — avoids being treated as a guest
+        //                   of a work tenant)
+        //  - organizations or a tenant id/domain → work/school only
+        'tenant' => env('ONEDRIVE_TENANT', 'common'),
+
         'graph_base' => 'https://graph.microsoft.com/v1.0',
         'scopes' => 'Files.ReadWrite.All offline_access User.Read',
         // Refresh tokens when within this many seconds of expiry (10 minutes).
