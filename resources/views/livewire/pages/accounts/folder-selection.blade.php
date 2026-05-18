@@ -40,7 +40,9 @@
                 $st = $folder['status'] ?? 'cloud';
                 $isDir = $folder['is_dir'];
             @endphp
-            <div class="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+            <div @if ($isDir) x-on:dblclick="$wire.open(@js($folder['name']))"
+                    title="{{ __('sync.open_folder_hint') }}" @endif
+                class="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 @if ($isDir) cursor-pointer select-none @endif">
                 <div class="w-8 flex items-center">
                     @if ($isDir)
                         <flux:checkbox wire:model="selected" value="{{ $folder['path'] }}" />
@@ -50,12 +52,7 @@
                 <div class="flex-1 min-w-0 flex items-center gap-2">
                     <flux:icon :name="$isDir ? 'folder' : 'document'"
                         class="size-4 shrink-0 {{ $isDir ? 'text-sky-600 dark:text-sky-500' : 'text-zinc-400' }}" />
-                    @if ($isDir)
-                        <button wire:click="open('{{ addslashes($folder['name']) }}')"
-                            class="truncate text-left hover:underline">{{ $folder['name'] }}</button>
-                    @else
-                        <span class="truncate">{{ $folder['name'] }}</span>
-                    @endif
+                    <span class="truncate">{{ $folder['name'] }}</span>
                 </div>
 
                 {{-- STATUS column --}}
