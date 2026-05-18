@@ -10,6 +10,7 @@ use App\Models\SyncFolder;
 use App\Models\SyncHistory;
 use App\Services\Accounts\AccountsService;
 use App\Services\Files\LocalFiles;
+use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
 use App\Services\Settings\SettingsRepository;
 use Livewire\Attributes\Layout;
@@ -68,6 +69,7 @@ class FolderSelection extends Component
     {
         $full = trim($this->path.'/'.$name, '/');
         $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+        PathErrors::clear($local); // retry clears prior error
         PendingOps::mark($local);
         DownloadPathJob::dispatch($this->account->id, $full);
         $this->dispatch('toast', type: 'success', message: __('cache.pinning'));
@@ -78,6 +80,7 @@ class FolderSelection extends Component
     {
         $full = trim($this->path.'/'.$name, '/');
         $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+        PathErrors::clear($local);
         PendingOps::mark($local);
         FreeOnlineJob::dispatch($this->account->id, $full);
         $this->dispatch('toast', type: 'success', message: __('cache.freeing'));
@@ -151,6 +154,8 @@ class FolderSelection extends Component
         }
         foreach ($entries as &$e) {
             $e['status'] = $local->status($this->account, $e['path']);
+            $e['errmsg'] = $e['status'] === 'error'
+                ? $local->errorFor($this->account, $e['path']) : null;
         }
         unset($e);
 

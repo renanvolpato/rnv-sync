@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Models\Account;
 use App\Services\Files\LocalFiles;
+use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -42,20 +43,20 @@ class FreeOnlineJob implements ShouldQueue
 
         $local = $files->localPathFor($account, $this->path);
 
-        try {
-            $files->free($account, $this->path);
-        } finally {
-            PendingOps::clear($local);
-        }
+        // Keep ⟳ across retries: only success clears it.
+        $files->free($account, $this->path);
+
+        PendingOps::clear($local);
+        PathErrors::clear($local);
     }
 
     public function failed(?Throwable $e): void
     {
         $account = Account::find($this->accountId);
         if ($account) {
-            PendingOps::clear(
-                app(LocalFiles::class)->localPathFor($account, $this->path),
-            );
+            $local = app(LocalFiles::class)->localPathFor($account, $this->path);
+            PendingOps::clear($local);
+            PathErrors::mark($local, $e?->getMessage() ?? 'Keep online failed.');
         }
     }
 }

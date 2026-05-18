@@ -26,6 +26,8 @@ return [
     'status_downloaded' => 'Available on this device',
     'status_cloud' => 'Online only',
     'status_syncing' => 'Syncing…',
+    'status_error' => 'Error',
+    'tip_error' => 'Last attempt failed — click to try again.',
     'tip_syncing' => 'In progress — downloading or freeing this item.',
     'tip_downloaded' => 'Local — downloaded to this device.',
     'tip_cloud' => 'Online only — stays in the cloud, uses no disk space.',

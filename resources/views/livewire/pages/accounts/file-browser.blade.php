@@ -62,6 +62,7 @@
                     @foreach ($entries as $entry)
                         @php
                             $syncing = $entry['status'] === 'syncing';
+                            $err = ($entry['status'] ?? '') === 'error';
                             $down = $isDownloaded($entry['status']);
                         @endphp
                         <tr class="border-b border-zinc-100 dark:border-zinc-800/60 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
@@ -85,6 +86,12 @@
                                         <flux:icon.arrow-path class="size-4 animate-spin" />
                                         <span class="text-xs">{{ __('cache.status_syncing') }}</span>
                                     </span>
+                                @elseif ($err)
+                                    <span class="inline-flex items-center gap-1.5 text-rose-600 dark:text-rose-500"
+                                        title="{{ $entry['errmsg'] ?? __('cache.tip_error') }}">
+                                        <flux:icon.exclamation-triangle class="size-4" />
+                                        <span class="text-xs">{{ __('cache.status_error') }}</span>
+                                    </span>
                                 @elseif ($down)
                                     <span class="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500"
                                         title="{{ __('cache.tip_downloaded') }}">
@@ -105,6 +112,12 @@
                             <td class="px-4 py-2.5 text-right whitespace-nowrap">
                                 @if ($syncing)
                                     <span class="text-xs text-zinc-400">{{ __('common.loading') }}</span>
+                                @elseif ($err)
+                                    <span title="{{ $entry['errmsg'] ?? __('cache.tip_error') }}">
+                                        <flux:button wire:click="download('{{ addslashes($entry['name']) }}', {{ $entry['is_dir'] ? 'true' : 'false' }}, {{ $entry['size'] }})" size="xs" variant="ghost" icon="arrow-path">
+                                            {{ __('common.retry') }}
+                                        </flux:button>
+                                    </span>
                                 @elseif ($down)
                                     <span title="{{ __('cache.tip_free_action') }}">
                                         <flux:button wire:click="free('{{ addslashes($entry['name']) }}')" size="xs" variant="ghost" icon="cloud">

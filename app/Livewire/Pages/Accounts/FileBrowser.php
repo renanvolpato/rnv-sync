@@ -9,6 +9,7 @@ use App\Models\Account;
 use App\Services\Accounts\AccountsService;
 use App\Services\Cache\CacheService;
 use App\Services\Files\LocalFiles;
+use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
 use App\Services\Settings\SettingsRepository;
 use Livewire\Attributes\Layout;
@@ -57,6 +58,7 @@ class FileBrowser extends Component
 
         if ($this->physical) {
             $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+            PathErrors::clear($local);
             PendingOps::mark($local); // show "syncing" now
             DownloadPathJob::dispatch($this->account->id, $full);
             $this->dispatch('toast', type: 'success', message: __('cache.pinning'));
@@ -83,6 +85,7 @@ class FileBrowser extends Component
             // Upload-if-needed then drop local, in the background
             // (shows the syncing state; never loses a new local file).
             $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+            PathErrors::clear($local);
             PendingOps::mark($local);
             FreeOnlineJob::dispatch($this->account->id, $full);
         } else {
@@ -138,6 +141,8 @@ class FileBrowser extends Component
             $entry['status'] = $this->physical
                 ? $local->status($this->account, $entry['path'])
                 : $cache->cacheStatus($this->account, $entry['path']);
+            $entry['errmsg'] = ($this->physical && $entry['status'] === 'error')
+                ? $local->errorFor($this->account, $entry['path']) : null;
         }
         unset($entry);
 

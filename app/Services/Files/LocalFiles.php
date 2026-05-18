@@ -35,13 +35,17 @@ class LocalFiles
         return $this->baseDir($account).'/'.ltrim($path, '/');
     }
 
-    /** syncing (op in flight) → downloaded (real file) → cloud-only. */
+    /** syncing → error → downloaded (real file) → cloud-only. */
     public function status(Account $account, string $path): string
     {
         $local = $this->localPathFor($account, $path);
 
         if (PendingOps::has($local)) {
             return 'syncing';
+        }
+
+        if (PathErrors::has($local)) {
+            return 'error';
         }
 
         if (is_dir($local)) {
@@ -61,6 +65,12 @@ class LocalFiles
         }
 
         return 'cloud';
+    }
+
+    /** Last failure message for a path (for the UI tooltip), if any. */
+    public function errorFor(Account $account, string $path): ?string
+    {
+        return PathErrors::get($this->localPathFor($account, $path));
     }
 
     /**
@@ -179,6 +189,12 @@ class LocalFiles
     {
         foreach ($entries as $e) {
             $local = $this->localPathFor($account, $e['path']);
+
+            // Don't drop a placeholder over a file that's being
+            // downloaded right now (would race the rclone copy).
+            if (PendingOps::has($local)) {
+                continue;
+            }
 
             if ($e['is_dir']) {
                 File::ensureDirectoryExists($local);

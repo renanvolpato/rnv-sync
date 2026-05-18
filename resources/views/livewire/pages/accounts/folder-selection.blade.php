@@ -64,6 +64,11 @@
                         <span class="inline-flex items-center gap-1 text-sky-600 dark:text-sky-500 text-xs" title="{{ __('cache.tip_syncing') }}">
                             <flux:icon.arrow-path class="size-3.5 animate-spin" /> {{ __('cache.status_syncing') }}
                         </span>
+                    @elseif ($st === 'error')
+                        <span class="inline-flex items-center gap-1 text-rose-600 dark:text-rose-500 text-xs"
+                            title="{{ $folder['errmsg'] ?? __('cache.tip_error') }}">
+                            <flux:icon.exclamation-triangle class="size-3.5" /> {{ __('cache.status_error') }}
+                        </span>
                     @elseif ($st === 'downloaded')
                         <span class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-500 text-xs" title="{{ __('cache.tip_downloaded') }}">
                             <flux:icon.check-circle variant="solid" class="size-3.5" /> {{ __('cache.status_downloaded') }}
@@ -79,6 +84,12 @@
                 <div class="w-52 border-l border-zinc-200 dark:border-zinc-800 pl-3 flex items-center justify-end gap-1">
                     @if ($st === 'syncing')
                         <span class="text-xs text-zinc-400">{{ __('common.loading') }}</span>
+                    @elseif ($st === 'error')
+                        <span title="{{ $folder['errmsg'] ?? __('cache.tip_error') }}">
+                            <flux:button wire:click="keepOffline('{{ addslashes($folder['name']) }}')" size="xs" variant="ghost" icon="arrow-path">
+                                {{ __('common.retry') }}
+                            </flux:button>
+                        </span>
                     @elseif ($st === 'downloaded')
                         <span title="{{ __('cache.tip_free_action') }}">
                             <flux:button wire:click="freeOnline('{{ addslashes($folder['name']) }}')" size="xs" variant="ghost" icon="cloud">

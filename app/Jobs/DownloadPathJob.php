@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Models\Account;
 use App\Services\Files\LocalFiles;
+use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -40,20 +41,22 @@ class DownloadPathJob implements ShouldQueue
 
         $local = $files->localPathFor($account, $this->path);
 
-        try {
-            $files->download($account, $this->path);
-        } finally {
-            PendingOps::clear($local);
-        }
+        // On exception we DON'T clear pending here: the ⟳ state must
+        // persist across retries. Only success clears it.
+        $files->download($account, $this->path);
+
+        PendingOps::clear($local);
+        PathErrors::clear($local);
     }
 
     public function failed(?\Throwable $e): void
     {
         $account = Account::find($this->accountId);
-        if ($account) {
-            PendingOps::clear(
-                app(LocalFiles::class)->localPathFor($account, $this->path),
-            );
+        if (! $account) {
+            return;
         }
+        $local = app(LocalFiles::class)->localPathFor($account, $this->path);
+        PendingOps::clear($local);
+        PathErrors::mark($local, $e?->getMessage() ?? 'Download failed.');
     }
 }
