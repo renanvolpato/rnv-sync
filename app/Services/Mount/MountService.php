@@ -77,6 +77,9 @@ class MountService
             '--tpslimit-burst='.$cfg['tpslimit_burst'],
             '--cache-dir='.$cacheDir,
             '--allow-non-empty',
+            // Friendly label in the file manager instead of the raw
+            // remote name (e.g. "RNV Sync — My OneDrive").
+            '--volname=RNV Sync — '.$account->name,
             '--log-file='.$logFile,
         ];
     }
