@@ -50,13 +50,13 @@ php artisan migrate --force
 
 say "Installing systemd user services"
 mkdir -p "${HOME}/.config/systemd/user"
-for unit in rnv-sync-web rnv-sync-queue rnv-sync-scheduler rnv-sync-reverb; do
+for unit in rnv-sync-web rnv-sync-queue rnv-sync-scheduler rnv-sync-reverb rnv-sync-watch; do
   sed "s|@APP_DIR@|${APP_DIR}|g; s|@PHP@|$(command -v php)|g" \
     "install/systemd/${unit}.service" > "${HOME}/.config/systemd/user/${unit}.service"
 done
 systemctl --user daemon-reload
 systemctl --user enable --now \
-  rnv-sync-web rnv-sync-queue rnv-sync-scheduler rnv-sync-reverb
+  rnv-sync-web rnv-sync-queue rnv-sync-scheduler rnv-sync-reverb rnv-sync-watch
 
 # Keep the services running after logout / across reboots, with no
 # open browser or terminal. enable-linger for one's own user is

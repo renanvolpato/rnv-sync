@@ -1,0 +1,17 @@
+[Unit]
+Description=RNV Sync real-time file watcher (instant upload on change)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=@APP_DIR@
+# inotify-driven: ~0% CPU until a file actually changes, then one
+# small debounced sync. Restart=always because a healthy watcher
+# never exits on its own.
+ExecStart=@PHP@ artisan rnvsync:watch
+Restart=always
+RestartSec=5
+Nice=10
+
+[Install]
+WantedBy=default.target

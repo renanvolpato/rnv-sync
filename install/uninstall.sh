@@ -16,7 +16,7 @@ read -r -p "Remove RNV Sync (services, app, file-manager integration)? Your sync
 
 say "Stopping and removing background services"
 systemctl --user disable --now \
-  rnv-sync-web rnv-sync-queue rnv-sync-scheduler rnv-sync-reverb 2>/dev/null || true
+  rnv-sync-web rnv-sync-queue rnv-sync-scheduler rnv-sync-reverb rnv-sync-watch 2>/dev/null || true
 rm -f "${HOME}"/.config/systemd/user/rnv-sync-*.service
 rm -f "${HOME}"/.config/systemd/user/default.target.wants/rnv-sync-*.service
 systemctl --user daemon-reload 2>/dev/null || true

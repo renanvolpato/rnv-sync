@@ -48,6 +48,25 @@ install_sqlite_ext() {
   esac
 }
 
+install_inotify() {
+  if command -v inotifywait >/dev/null 2>&1; then
+    return 0
+  fi
+  say "Installing inotify-tools (real-time upload on file change)"
+  case "${DISTRO}" in
+    ubuntu|debian|pop|linuxmint)
+      ${SUDO} apt-get install -y inotify-tools ;;
+    fedora|rhel|centos)
+      ${SUDO} dnf install -y inotify-tools ;;
+    arch|manjaro)
+      ${SUDO} pacman -S --noconfirm inotify-tools ;;
+    alpine)
+      ${SUDO} apk add --no-cache inotify-tools ;;
+    *)
+      warn "Unknown distro. Install 'inotify-tools' for real-time sync." ;;
+  esac
+}
+
 require() { command -v "$1" >/dev/null 2>&1 || { warn "$1 is required but not found."; MISSING=1; }; }
 
 MISSING=0
@@ -56,6 +75,7 @@ require composer
 [ "${MISSING}" -eq 1 ] && { echo "Install the missing tools above and re-run."; exit 1; }
 
 install_sqlite_ext
+install_inotify
 
 if ! php -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
   warn "pdo_sqlite still not loaded. You may need to enable it in php.ini."

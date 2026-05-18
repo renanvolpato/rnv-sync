@@ -15,7 +15,7 @@ Install: see install/nautilus/install.sh (needs python3-nautilus).
 import json
 import os
 import subprocess
-from gi.repository import Nautilus, GObject
+from gi.repository import Nautilus, GObject, GLib
 
 CONFIG = os.path.expanduser("~/.config/rnv-sync/extension.json")
 
@@ -67,24 +67,63 @@ def _pending(cfg):
         return set()
 
 
+def _state(path, cfg):
+    if path.rstrip("/") in _pending(cfg):
+        return "syncing"
+    if _is_downloaded(path):
+        return "synced"
+    return "cloud"
+
+
+_EMBLEM = {
+    "syncing": "emblem-rnvsync-syncing",
+    "synced": "emblem-rnvsync-synced",
+    "cloud": "emblem-rnvsync-cloud",  # ☁ blue, online only
+}
+
+
 class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProvider):
+
+    def __init__(self):
+        super().__init__()
+        # Live refresh: Nautilus only re-reads emblems when asked, so
+        # poll the (small) set of on-screen items every 2s and force a
+        # re-read of any whose state changed — emblems update on their
+        # own within ~2s instead of needing a manual refresh.
+        self._seen = {}  # path -> [NautilusFileInfo, last_state]
+        GLib.timeout_add_seconds(2, self._tick)
 
     def update_file_info(self, file):
         cfg = _load()
         path = _path_of(file)
         if not _in_base(path, cfg.get("bases", [])):
             return
-        # Custom emblems shipped by the installer (reliable + correct
-        # colors). Fall back to stock names if the theme lacks ours.
-        # Exactly ONE emblem per item. Our installer ships the custom
-        # icons; if the theme somehow lacks one Nautilus just draws
-        # nothing for it (never a doubled badge).
-        if path.rstrip("/") in _pending(cfg):
-            file.add_emblem("emblem-rnvsync-syncing")
-        elif _is_downloaded(path):
-            file.add_emblem("emblem-rnvsync-synced")
-        else:
-            file.add_emblem("emblem-rnvsync-cloud")  # ☁ blue, online only
+        # Exactly ONE emblem per item; never a doubled badge.
+        st = _state(path, cfg)
+        file.add_emblem(_EMBLEM[st])
+        self._seen[path] = [file, st]
+
+    def _tick(self):
+        if not self._seen:
+            return True
+        cfg = _load()
+        for path, pair in list(self._seen.items()):
+            file, old = pair
+            if not os.path.exists(path):
+                self._seen.pop(path, None)
+                continue
+            new = _state(path, cfg)
+            if new != old:
+                pair[1] = new
+                try:
+                    file.invalidate_extension_info()
+                except Exception:
+                    self._seen.pop(path, None)
+        # Keep the registry bounded (long sessions, many folders).
+        if len(self._seen) > 4000:
+            for p in list(self._seen)[:2000]:
+                self._seen.pop(p, None)
+        return True  # keep the timer alive
 
     def _run(self, action, path):
         cfg = _load()
