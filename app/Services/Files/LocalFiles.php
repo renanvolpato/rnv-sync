@@ -45,7 +45,15 @@ class LocalFiles
         }
 
         if (is_dir($local)) {
-            return 'downloaded';
+            // A folder is "on this device" only if it actually holds
+            // real files; a tree of 0-byte placeholders is cloud-only.
+            foreach (File::allFiles($local) as $f) {
+                if ($f->getSize() > 0) {
+                    return 'downloaded';
+                }
+            }
+
+            return 'cloud';
         }
 
         if (is_file($local) && filesize($local) > 0) {

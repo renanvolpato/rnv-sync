@@ -41,8 +41,17 @@ def _in_base(path, bases):
 
 
 def _is_downloaded(path):
+    # A folder counts as "on this device" only if it holds at least one
+    # real file; a tree of 0-byte placeholders is cloud-only.
     if os.path.isdir(path):
-        return True
+        for root, _dirs, names in os.walk(path):
+            for n in names:
+                try:
+                    if os.path.getsize(os.path.join(root, n)) > 0:
+                        return True
+                except OSError:
+                    pass
+        return False
     try:
         return os.path.getsize(path) > 0
     except OSError:

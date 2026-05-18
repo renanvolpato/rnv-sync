@@ -2,11 +2,14 @@
 
 namespace App\Livewire\Pages\Accounts;
 
+use App\Jobs\DownloadPathJob;
 use App\Jobs\MaterializePlaceholdersJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
 use App\Models\SyncHistory;
 use App\Services\Accounts\AccountsService;
+use App\Services\Files\LocalFiles;
+use App\Services\Files\PendingOps;
 use App\Services\Settings\SettingsRepository;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -57,6 +60,26 @@ class FolderSelection extends Component
     {
         $parent = trim((string) dirname($this->path), '/.');
         $this->path = $parent === '' ? '' : $parent;
+    }
+
+    /** Keep an item on this device (download in background). */
+    public function keepOffline(string $name): void
+    {
+        $full = trim($this->path.'/'.$name, '/');
+        $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+        PendingOps::mark($local);
+        DownloadPathJob::dispatch($this->account->id, $full);
+        $this->dispatch('toast', type: 'success', message: __('cache.pinning'));
+    }
+
+    /** Free up space (becomes online-only). */
+    public function freeOnline(string $name): void
+    {
+        app(LocalFiles::class)->free(
+            $this->account,
+            trim($this->path.'/'.$name, '/'),
+        );
+        $this->dispatch('toast', type: 'success', message: __('cache.freed'));
     }
 
     /**
@@ -116,13 +139,16 @@ class FolderSelection extends Component
         $entries = [];
 
         try {
-            $entries = array_values(array_filter(
-                $accounts->listRemote($this->account, $this->path),
-                fn (array $e) => $e['is_dir'],
-            ));
+            $entries = $accounts->listRemote($this->account, $this->path);
         } catch (\Throwable) {
             // Listing failure handled by the empty state in the view.
         }
+
+        $local = app(LocalFiles::class);
+        foreach ($entries as &$e) {
+            $e['status'] = $local->status($this->account, $e['path']);
+        }
+        unset($e);
 
         $running = SyncHistory::where('account_id', $this->account->id)
             ->where('status', 'running')->exists();
