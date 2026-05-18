@@ -45,17 +45,16 @@ it('saves folder selection and queues a sync within seconds (EARS F2.1)', functi
     Queue::assertPushed(StartSyncJob::class);
 });
 
-it('toggles a folder and queues a sync, and pauses globally', function () {
+it('unsyncs a folder (removes it) and pauses globally', function () {
     Queue::fake();
     $folder = SyncFolder::factory()->create([
-        'account_id' => $this->account->id, 'is_active' => false,
+        'account_id' => $this->account->id, 'is_active' => true,
     ]);
 
     $component = Livewire::test(SyncActivity::class, ['account' => $this->account])
-        ->call('toggleFolder', $folder->id);
+        ->call('unsync', $folder->id);
 
-    expect($folder->fresh()->is_active)->toBeTrue();
-    Queue::assertPushed(StartSyncJob::class);
+    expect(SyncFolder::find($folder->id))->toBeNull();
 
     $component->call('togglePause');
     expect(app(SyncService::class)->isPaused())->toBeTrue();

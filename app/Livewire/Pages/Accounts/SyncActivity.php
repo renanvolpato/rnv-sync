@@ -36,14 +36,14 @@ class SyncActivity extends Component
         session()->flash('status', __('sync.queued'));
     }
 
-    public function toggleFolder(int $folderId): void
+    /** Fully remove a folder from sync. Local files are left in place. */
+    public function unsync(int $folderId): void
     {
-        $folder = SyncFolder::findOrFail($folderId);
-        $folder->update(['is_active' => ! $folder->is_active]);
+        SyncFolder::where('id', $folderId)
+            ->where('account_id', $this->account->id)
+            ->delete();
 
-        if ($folder->is_active) {
-            StartSyncJob::dispatch($folder->id); // EARS: sync within 30s
-        }
+        session()->flash('status', __('sync.unsynced'));
     }
 
     public function togglePause(SyncService $sync): void
@@ -55,10 +55,16 @@ class SyncActivity extends Component
     public function render()
     {
         return view('livewire.pages.accounts.sync-activity', [
-            'folders' => $this->account->syncFolders()->orderBy('remote_path')->get(),
+            // Only folders actually chosen for sync appear here.
+            'folders' => $this->account->syncFolders()
+                ->where('is_active', true)
+                ->orderBy('remote_path')
+                ->get(),
+            'running' => SyncHistory::where('account_id', $this->account->id)
+                ->where('status', 'running')->exists(),
             'history' => SyncHistory::where('account_id', $this->account->id)
                 ->orderByDesc('started_at')
-                ->paginate(25),
+                ->paginate(15),
         ]);
     }
 }

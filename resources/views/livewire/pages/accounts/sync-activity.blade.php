@@ -41,6 +41,13 @@
         </div>
     </template>
 
+    @if ($running)
+        <div class="mb-6 flex items-center gap-2 rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/40 p-3 text-sm" wire:poll.5s>
+            <flux:icon.arrow-path class="size-4 animate-spin text-sky-600" />
+            {{ __('sync.syncing') }}
+        </div>
+    @endif
+
     {{-- Folders --}}
     <flux:card class="mb-8">
         <flux:heading size="lg">{{ __('sync.folders') }}</flux:heading>
@@ -57,16 +64,23 @@
                             @endif
                         </p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 shrink-0">
+                        @if ($running)
+                            <flux:badge size="sm" color="sky">
+                                <flux:icon.arrow-path class="size-3 animate-spin mr-1" /> {{ __('sync.active') }}
+                            </flux:badge>
+                        @elseif ($folder->last_sync_status === 'error')
+                            <flux:badge size="sm" color="rose">{{ __('sync.status_error') }}</flux:badge>
+                        @elseif ($folder->last_sync_status === 'success')
+                            <flux:badge size="sm" color="emerald">{{ __('sync.status_success') }}</flux:badge>
+                        @endif
                         <flux:button wire:click="syncNow({{ $folder->id }})" size="sm" variant="ghost" icon="arrow-path">
                             {{ __('sync.sync_now') }}
                         </flux:button>
-                        <flux:badge size="sm" :color="$folder->is_active ? 'emerald' : 'zinc'">
-                            {{ $folder->is_active ? __('sync.active') : __('sync.inactive') }}
-                        </flux:badge>
-                        <flux:button wire:click="toggleFolder({{ $folder->id }})" size="sm" variant="ghost"
-                            icon="{{ $folder->is_active ? 'x-mark' : 'arrow-path' }}">
-                            {{ $folder->is_active ? __('sync.remove') : __('sync.resume_folder') }}
+                        <flux:button wire:click="unsync({{ $folder->id }})"
+                            wire:confirm="{{ __('sync.unsync_confirm') }}"
+                            size="sm" variant="ghost" icon="x-mark">
+                            {{ __('sync.remove') }}
                         </flux:button>
                     </div>
                 </div>

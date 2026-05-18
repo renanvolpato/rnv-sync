@@ -5,6 +5,7 @@ namespace App\Livewire\Pages\Accounts;
 use App\Jobs\StartSyncJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
+use App\Models\SyncHistory;
 use App\Services\Accounts\AccountsService;
 use App\Services\Settings\SettingsRepository;
 use Livewire\Attributes\Layout;
@@ -81,8 +82,17 @@ class FolderSelection extends Component
             // Listing failure handled by empty state in the view.
         }
 
+        $synced = $this->account->syncFolders()
+            ->where('is_active', true)
+            ->pluck('last_sync_status', 'remote_path');
+
+        $running = SyncHistory::where('account_id', $this->account->id)
+            ->where('status', 'running')->exists();
+
         return view('livewire.pages.accounts.folder-selection', [
             'folders' => $entries,
+            'synced' => $synced,
+            'running' => $running,
         ]);
     }
 }

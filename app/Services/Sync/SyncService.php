@@ -16,6 +16,7 @@ use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneRunner;
 use App\Services\Settings\SettingsRepository;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\File;
 
 /**
  * Bidirectional folder sync via `rclone bisync` (SPEC F2.2).
@@ -63,6 +64,10 @@ class SyncService
         event(new SyncStatusChanged($account->id, 'started', $folder->remote_path));
 
         $this->configGenerator->regenerate();
+
+        // rclone bisync aborts with "directory not found" if the local
+        // side doesn't exist yet — create it on first sync.
+        File::ensureDirectoryExists($folder->local_path);
 
         $remote = $account->remote_name.':'.ltrim($folder->remote_path, '/');
 

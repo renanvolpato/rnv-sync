@@ -18,12 +18,12 @@ class SyncFolderFactory extends Factory
      */
     public function definition(): array
     {
-        $path = '/'.fake()->word();
+        $name = fake()->unique()->word();
 
         return [
             'account_id' => Account::factory(),
-            'remote_path' => $path,
-            'local_path' => '/home/user/RnvSync'.$path,
+            'remote_path' => $name,
+            'local_path' => sys_get_temp_dir().'/rnvsync-test/'.$name,
             'sync_mode' => 'bisync',
             'is_active' => false,
         ];

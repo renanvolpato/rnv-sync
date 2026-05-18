@@ -40,18 +40,19 @@
         @endif
     </div>
 
-    <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-        <span>
-            {{ __('dashboard.last_sync') }}:
-            {{ $account->last_synced_at?->diffForHumans() ?? __('dashboard.never') }}
-        </span>
-        <div class="flex gap-1">
-            <flux:button :href="route('accounts.folders', $account)" variant="primary" size="xs" icon="folder-plus">
-                {{ __('sync.select_folders') }}
-            </flux:button>
-            <flux:button :href="route('accounts.activity', $account)" variant="ghost" size="xs" icon="arrow-path">
-                {{ __('sync.synced_title') }}
-            </flux:button>
-        </div>
+    <p class="text-xs text-zinc-500 dark:text-zinc-400">
+        {{ __('dashboard.last_sync') }}:
+        {{ $account->last_synced_at?->diffForHumans() ?? __('dashboard.never') }}
+    </p>
+
+    <div class="grid grid-cols-2 gap-2">
+        <flux:button :href="route('accounts.folders', $account)" variant="primary" size="sm"
+            icon="folder-plus" class="w-full">
+            {{ __('sync.select_folders') }}
+        </flux:button>
+        <flux:button :href="route('accounts.activity', $account)" variant="ghost" size="sm"
+            icon="arrow-path" class="w-full">
+            {{ __('sync.synced_title') }}
+        </flux:button>
     </div>
 </div>
