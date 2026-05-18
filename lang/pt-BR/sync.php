@@ -1,21 +1,27 @@
 <?php
 
 return [
-    'select_folders' => 'Selecionar pastas',
-    'select_folders_hint' => 'Escolha quais pastas de nível superior sincronizar nesta máquina.',
-    'save_selection' => 'Salvar seleção',
-    'folders_saved' => 'Seleção de pastas salva. Sincronização iniciada.',
-    'activity_subtitle' => 'Pastas, status de sincronização e histórico.',
-    'folders' => 'Pastas',
-    'no_folders' => 'Nenhuma pasta selecionada ainda.',
+    // Tela 1 — escolher o que sincronizar
+    'select_folders' => 'Selecionar pastas para sincronizar',
+    'select_folders_hint' => 'Marque as pastas (e subpastas) que você quer sincronizar com este computador. Elas começam a sincronizar assim que você salvar — sem passo extra.',
+    'save_selection' => 'Sincronizar estas pastas',
+    'folders_saved' => 'Sincronização iniciada para as pastas selecionadas.',
+
+    // Tela 2 — pastas sincronizadas
+    'synced_title' => 'Pastas sincronizadas',
+    'activity_subtitle' => 'Pastas que você escolheu sincronizar. Ficam como arquivos reais neste computador.',
+    'folders' => 'Pastas sincronizadas',
+    'no_folders' => 'Nenhuma pasta selecionada ainda. Use “Selecionar pastas para sincronizar”.',
     'history' => 'Histórico de sincronização',
     'no_history' => 'Nenhuma sincronização ainda.',
     'sync_now' => 'Sincronizar agora',
     'queued' => 'Sincronização na fila.',
-    'active' => 'Ativa',
-    'inactive' => 'Inativa',
-    'pause' => 'Pausar sincronização',
-    'resume' => 'Retomar sincronização',
+    'active' => 'Sincronizando',
+    'inactive' => 'Pausada',
+    'remove' => 'Parar de sincronizar',
+    'resume_folder' => 'Retomar',
+    'pause' => 'Pausar tudo',
+    'resume' => 'Retomar tudo',
     'syncing' => 'Sincronizando…',
 
     'status_success' => 'última sincronização OK',

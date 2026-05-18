@@ -33,7 +33,7 @@ it('saves folder selection and queues a sync within seconds (EARS F2.1)', functi
     Livewire::test(FolderSelection::class, ['account' => $this->account])
         ->set('selected', ['Documents' => true])
         ->call('save')
-        ->assertRedirect(route('accounts.files', $this->account));
+        ->assertRedirect(route('accounts.activity', $this->account));
 
     // remote_path is normalised (no leading slash); local_path joined
     // with a separator under the mount base.

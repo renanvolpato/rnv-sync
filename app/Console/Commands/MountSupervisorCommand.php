@@ -28,8 +28,24 @@ class MountSupervisorCommand extends Command
 
     public function handle(MountService $mounts, SettingsRepository $settings): int
     {
-        // Physical mode uses real files (no FUSE) — nothing to mount.
+        // Physical mode uses real files (no FUSE). Self-heal: if a stale
+        // rclone FUSE mount is left over (e.g. from a previous mount-mode
+        // run), unmount it so the folder works as a normal directory and
+        // the file manager doesn't error ("Transport endpoint is not
+        // connected").
         if ($settings->isPhysical()) {
+            foreach (Account::all() as $account) {
+                $base = rtrim($settings->mountBase(), '/').'/'.$account->name;
+                $isStale = trim((string) shell_exec(
+                    'mount 2>/dev/null | grep -F '.escapeshellarg(' '.$base.' ').' | grep -c fuse.rclone'
+                ));
+                if ($isStale !== '' && $isStale !== '0') {
+                    shell_exec('fusermount -u '.escapeshellarg($base).' 2>/dev/null');
+                    shell_exec('fusermount -uz '.escapeshellarg($base).' 2>/dev/null');
+                    $this->info("Unmounted stale FUSE mount: {$base}");
+                }
+            }
+
             return self::SUCCESS;
         }
 

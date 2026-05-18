@@ -46,11 +46,11 @@
             {{ $account->last_synced_at?->diffForHumans() ?? __('dashboard.never') }}
         </span>
         <div class="flex gap-1">
-            <flux:button :href="route('accounts.activity', $account)" variant="ghost" size="xs" icon="arrow-path">
-                {{ __('sync.folders') }}
+            <flux:button :href="route('accounts.folders', $account)" variant="primary" size="xs" icon="folder-plus">
+                {{ __('sync.select_folders') }}
             </flux:button>
-            <flux:button :href="route('accounts.files', $account)" variant="ghost" size="xs" icon="folder-open">
-                {{ __('accounts.browse_files') }}
+            <flux:button :href="route('accounts.activity', $account)" variant="ghost" size="xs" icon="arrow-path">
+                {{ __('sync.synced_title') }}
             </flux:button>
         </div>
     </div>

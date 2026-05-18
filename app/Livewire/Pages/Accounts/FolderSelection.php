@@ -63,7 +63,9 @@ class FolderSelection extends Component
             ->update(['is_active' => false]);
 
         session()->flash('status', __('sync.folders_saved'));
-        $this->redirectRoute('accounts.files', $this->account, navigate: true);
+        // Straight to the synced-folders screen — no extra "activate"
+        // step; selecting already starts the sync.
+        $this->redirectRoute('accounts.activity', $this->account, navigate: true);
     }
 
     public function render(AccountsService $accounts)

@@ -1,21 +1,27 @@
 <?php
 
 return [
-    'select_folders' => 'Select folders',
-    'select_folders_hint' => 'Choose which top-level folders to sync to this machine.',
-    'save_selection' => 'Save selection',
-    'folders_saved' => 'Folder selection saved. Sync started.',
-    'activity_subtitle' => 'Folders, sync status and history.',
-    'folders' => 'Folders',
-    'no_folders' => 'No folders selected yet.',
+    // Screen 1 — pick what to sync
+    'select_folders' => 'Select folders to sync',
+    'select_folders_hint' => 'Tick the folders (and subfolders) you want to sync to this computer. They start syncing as soon as you save — no extra step.',
+    'save_selection' => 'Sync these folders',
+    'folders_saved' => 'Syncing started for the selected folders.',
+
+    // Screen 2 — synced folders
+    'synced_title' => 'Synced folders',
+    'activity_subtitle' => 'Folders you chose to sync. They live as real files on this computer.',
+    'folders' => 'Synced folders',
+    'no_folders' => 'No folders selected yet. Use “Select folders to sync”.',
     'history' => 'Sync history',
     'no_history' => 'No sync runs yet.',
     'sync_now' => 'Sync now',
     'queued' => 'Sync queued.',
-    'active' => 'Active',
-    'inactive' => 'Inactive',
-    'pause' => 'Pause sync',
-    'resume' => 'Resume sync',
+    'active' => 'Syncing',
+    'inactive' => 'Paused',
+    'remove' => 'Stop syncing',
+    'resume_folder' => 'Resume',
+    'pause' => 'Pause all sync',
+    'resume' => 'Resume all sync',
     'syncing' => 'Syncing…',
 
     'status_success' => 'last sync OK',

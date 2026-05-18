@@ -14,8 +14,8 @@
 >
     <div class="flex items-center justify-between mb-6">
         <div>
-            <flux:heading size="xl">{{ $account->name }}</flux:heading>
-            <flux:subheading>{{ __('sync.activity_subtitle') }}</flux:subheading>
+            <flux:heading size="xl">{{ __('sync.synced_title') }}</flux:heading>
+            <flux:subheading>{{ $account->name }} — {{ __('sync.activity_subtitle') }}</flux:subheading>
         </div>
         <div class="flex gap-2">
             <flux:button :href="route('accounts.folders', $account)" variant="ghost" icon="folder-plus">
@@ -61,9 +61,12 @@
                         <flux:button wire:click="syncNow({{ $folder->id }})" size="sm" variant="ghost" icon="arrow-path">
                             {{ __('sync.sync_now') }}
                         </flux:button>
-                        <flux:button wire:click="toggleFolder({{ $folder->id }})" size="sm"
-                            variant="{{ $folder->is_active ? 'primary' : 'ghost' }}">
+                        <flux:badge size="sm" :color="$folder->is_active ? 'emerald' : 'zinc'">
                             {{ $folder->is_active ? __('sync.active') : __('sync.inactive') }}
+                        </flux:badge>
+                        <flux:button wire:click="toggleFolder({{ $folder->id }})" size="sm" variant="ghost"
+                            icon="{{ $folder->is_active ? 'x-mark' : 'arrow-path' }}">
+                            {{ $folder->is_active ? __('sync.remove') : __('sync.resume_folder') }}
                         </flux:button>
                     </div>
                 </div>
