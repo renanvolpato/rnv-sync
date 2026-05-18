@@ -94,6 +94,16 @@ class OneDriveOAuth
      */
     public function refreshIfNeeded(Account $account): bool
     {
+        // Zero-config accounts hold a token minted by rclone's built-in
+        // client. rclone refreshes it itself (it has the matching
+        // client id/secret embedded) whenever it runs against the
+        // remote. Refreshing here with our public client would fail
+        // (AADSTS70002: client_secret required) and wrongly disconnect
+        // the account — so leave it to rclone.
+        if ($account->uses_bundled_client) {
+            return false;
+        }
+
         $payload = $account->tokenPayload();
 
         if (! $payload || empty($payload['refresh_token'])) {

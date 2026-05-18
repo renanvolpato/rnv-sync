@@ -36,23 +36,77 @@ class RcloneConfigGenerator
         return $path;
     }
 
-    /** Build the INI content for all active accounts. */
+    /** Build the INI content. Includes active accounts plus
+     *  bundled-client accounts (rclone refreshes those itself, so they
+     *  can self-heal from a transient disconnect). */
     public function build(): string
     {
         $clientId = (string) config('rnvsync.oauth.client_id');
+        $existing = $this->readConfTokens();
 
         $blocks = Account::query()
-            ->where('status', Account::STATUS_ACTIVE)
+            ->where(fn ($q) => $q->where('status', Account::STATUS_ACTIVE)
+                ->orWhere('uses_bundled_client', true))
             ->get()
-            ->map(fn (Account $account): string => $this->renderRemote($account, $clientId))
+            ->map(fn (Account $account): string => $this->renderRemote($account, $clientId, $existing))
             ->all();
 
         return implode("\n", $blocks)."\n";
     }
 
-    private function renderRemote(Account $account, string $clientId): string
+    /**
+     * Current `token = {...}` per remote in the existing rclone.conf.
+     *
+     * @return array<string,string>
+     */
+    public function readConfTokens(): array
     {
-        $token = $account->oauth_token ?: '{}';
+        $path = $this->binary->configPath();
+        if (! is_file($path)) {
+            return [];
+        }
+
+        $tokens = [];
+        $current = null;
+        foreach (preg_split('/\r?\n/', (string) file_get_contents($path)) ?: [] as $line) {
+            if (preg_match('/^\[(.+)\]\s*$/', $line, $m)) {
+                $current = $m[1];
+            } elseif ($current !== null && preg_match('/^token\s*=\s*(.+)$/', $line, $m)) {
+                $tokens[$current] = trim($m[1]);
+            }
+        }
+
+        return $tokens;
+    }
+
+    /**
+     * Persist rclone's (possibly refreshed) token back into the DB so it
+     * doesn't get clobbered by a stale stored token. Bundled accounts
+     * only — rclone owns their token lifecycle.
+     */
+    public function syncTokenBack(Account $account): void
+    {
+        if (! $account->uses_bundled_client) {
+            return;
+        }
+
+        $confToken = $this->readConfTokens()[$account->remote_name] ?? null;
+
+        if ($confToken && $confToken !== '{}' && $confToken !== $account->oauth_token) {
+            $account->forceFill(['oauth_token' => $confToken])->save();
+        }
+    }
+
+    /**
+     * @param  array<string,string>  $existing
+     */
+    private function renderRemote(Account $account, string $clientId, array $existing = []): string
+    {
+        // For bundled accounts, prefer the token already in rclone.conf
+        // (rclone may have just refreshed it) over the stored one.
+        $token = ($account->uses_bundled_client && ! empty($existing[$account->remote_name]))
+            ? $existing[$account->remote_name]
+            : ($account->oauth_token ?: '{}');
 
         $driveType = $account->drive_type ?: match ($account->provider) {
             'onedrive_business' => 'business',

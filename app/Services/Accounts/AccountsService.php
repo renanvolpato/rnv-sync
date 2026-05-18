@@ -157,6 +157,14 @@ class AccountsService
 
         $result = $this->rclone->run(['lsjson', $remote], ['timeout' => 60]);
 
+        // rclone may have refreshed a bundled account's token — persist
+        // it and let the account recover from a transient disconnect.
+        $this->configGenerator->syncTokenBack($account);
+        if ($result->successful() && $account->uses_bundled_client
+            && $account->status !== Account::STATUS_ACTIVE) {
+            $account->forceFill(['status' => Account::STATUS_ACTIVE])->save();
+        }
+
         if (! $result->successful()) {
             return [];
         }

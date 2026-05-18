@@ -16,8 +16,17 @@ warn() { printf '\033[1;33m!  \033[0m %s\n' "$1"; }
 DISTRO="unknown"
 [ -r /etc/os-release ] && DISTRO="$(. /etc/os-release; echo "${ID:-unknown}")"
 
+# Privilege escalation: prefer a graphical prompt (pkexec) so the user
+# just types their password in a dialog — no terminal needed. Fall back
+# to sudo, then to nothing if already root.
 SUDO=""
-if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
+if [ "$(id -u)" -ne 0 ]; then
+  if command -v pkexec >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+    SUDO="pkexec"
+  else
+    SUDO="sudo"
+  fi
+fi
 
 install_sqlite_ext() {
   if php -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
