@@ -31,7 +31,7 @@ it('saves folder selection and queues a sync within seconds (EARS F2.1)', functi
         ]), ''));
 
     Livewire::test(FolderSelection::class, ['account' => $this->account])
-        ->set('selected', ['Documents' => true])
+        ->set('selected', ['Documents'])
         ->call('save')
         ->assertRedirect(route('accounts.activity', $this->account));
 

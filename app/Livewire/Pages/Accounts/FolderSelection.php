@@ -9,19 +9,26 @@ use App\Models\SyncHistory;
 use App\Services\Accounts\AccountsService;
 use App\Services\Settings\SettingsRepository;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * Folder selection (SPEC F2.1 / Key Screen 5): pick top-level remote
- * folders to sync. Activating a folder queues a sync immediately
- * (EARS: WHEN toggled active, initiate a sync within 30 seconds).
+ * Folder selection (SPEC F2.1 / Key Screen 5).
+ *
+ * Navigable: drill into folders and tick any folder/subfolder at any
+ * level. Selecting a folder starts syncing it immediately (the whole
+ * folder is downloaded as real files — physical model).
  */
 #[Layout('components.layouts.app')]
 class FolderSelection extends Component
 {
     public Account $account;
 
-    /** @var array<string,bool> remote_path => selected */
+    /** Current folder being browsed (for picking subfolders). */
+    #[Url(as: 'path')]
+    public string $path = '';
+
+    /** @var list<string> full remote paths chosen to sync */
     public array $selected = [];
 
     public function mount(Account $account): void
@@ -29,21 +36,48 @@ class FolderSelection extends Component
         $this->account = $account;
         $this->selected = $account->syncFolders()
             ->where('is_active', true)
-            ->pluck('remote_path', 'remote_path')
-            ->map(fn () => true)
+            ->pluck('remote_path')
             ->all();
+    }
+
+    public function open(string $name): void
+    {
+        $this->path = trim($this->path.'/'.$name, '/');
+    }
+
+    public function goTo(string $path): void
+    {
+        $this->path = trim($path, '/');
+    }
+
+    /**
+     * @return list<array{label:string,path:string}>
+     */
+    public function breadcrumbs(): array
+    {
+        $crumbs = [['label' => $this->account->name, 'path' => '']];
+        $acc = '';
+
+        foreach (array_filter(explode('/', $this->path)) as $segment) {
+            $acc = trim($acc.'/'.$segment, '/');
+            $crumbs[] = ['label' => $segment, 'path' => $acc];
+        }
+
+        return $crumbs;
     }
 
     public function save(SettingsRepository $settings): void
     {
         $mountBase = rtrim($settings->mountBase(), '/').'/'.$this->account->name;
+        $chosen = array_values(array_unique(array_map(
+            fn ($p) => ltrim((string) $p, '/'),
+            $this->selected,
+        )));
 
-        foreach ($this->selected as $path => $isOn) {
-            if (! $isOn) {
+        foreach ($chosen as $relative) {
+            if ($relative === '') {
                 continue;
             }
-
-            $relative = ltrim((string) $path, '/');
 
             $folder = SyncFolder::updateOrCreate(
                 ['account_id' => $this->account->id, 'remote_path' => $relative],
@@ -54,18 +88,15 @@ class FolderSelection extends Component
                 ],
             );
 
-            // EARS F2.1: queue a sync immediately on activation.
-            StartSyncJob::dispatch($folder->id);
+            StartSyncJob::dispatch($folder->id); // starts syncing now
         }
 
-        // Deactivate folders the user unchecked.
+        // Folders the user unchecked → stop syncing (kept files stay).
         SyncFolder::where('account_id', $this->account->id)
-            ->whereNotIn('remote_path', array_keys(array_filter($this->selected)))
+            ->whereNotIn('remote_path', $chosen)
             ->update(['is_active' => false]);
 
         session()->flash('status', __('sync.folders_saved'));
-        // Straight to the synced-folders screen — no extra "activate"
-        // step; selecting already starts the sync.
         $this->redirectRoute('accounts.activity', $this->account, navigate: true);
     }
 
@@ -74,24 +105,19 @@ class FolderSelection extends Component
         $entries = [];
 
         try {
-            $entries = array_filter(
-                $accounts->listRemote($this->account, ''),
+            $entries = array_values(array_filter(
+                $accounts->listRemote($this->account, $this->path),
                 fn (array $e) => $e['is_dir'],
-            );
+            ));
         } catch (\Throwable) {
-            // Listing failure handled by empty state in the view.
+            // Listing failure handled by the empty state in the view.
         }
-
-        $synced = $this->account->syncFolders()
-            ->where('is_active', true)
-            ->pluck('last_sync_status', 'remote_path');
 
         $running = SyncHistory::where('account_id', $this->account->id)
             ->where('status', 'running')->exists();
 
         return view('livewire.pages.accounts.folder-selection', [
             'folders' => $entries,
-            'synced' => $synced,
             'running' => $running,
         ]);
     }
