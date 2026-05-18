@@ -75,10 +75,16 @@ class RcloneRunner
             $this->buildCommand($args, $jsonLog),
         ));
 
-        // setsid detaches from the controlling terminal so the child
-        // survives the PHP request lifecycle. echo $! returns the PID.
+        // Detach the child so it survives the PHP request:
+        //  - setsid: new session, no controlling terminal
+        //  - close every inherited fd except 0/1/2 BEFORE exec'ing rclone
+        //    so long-lived processes (esp. `rclone mount`) never hold the
+        //    web server's listening socket and pin its port.
         $target = escapeshellarg($outFile);
-        $wrapped = "setsid {$command} > {$target} 2>&1 & echo \$!";
+        $inner = 'cd / ; for f in /proc/$$/fd/*; do n=${f##*/}; '
+            .'[ "$n" -gt 2 ] 2>/dev/null && eval "exec $n>&-"; done; '
+            ."exec {$command} > {$target} 2>&1";
+        $wrapped = 'setsid bash -c '.escapeshellarg($inner).' < /dev/null & echo $!';
 
         $pid = trim(Process::run(['bash', '-c', $wrapped])->output());
 
