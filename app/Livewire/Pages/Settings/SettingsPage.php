@@ -22,6 +22,8 @@ class SettingsPage extends Component
 
     public string $language = 'en';
 
+    public string $storage_mode = 'physical';
+
     public string $mount_base = '';
 
     public ?int $bandwidth_limit_kbps = null;
@@ -47,6 +49,7 @@ class SettingsPage extends Component
     public function mount(SettingsRepository $settings): void
     {
         $this->language = $settings->language();
+        $this->storage_mode = $settings->storageMode();
         $this->mount_base = $settings->mountBase();
         $this->bandwidth_limit_kbps = $settings->get('bandwidth_limit_kbps');
         $this->cache_max_gb = $settings->get('cache_max_gb');
@@ -84,10 +87,12 @@ class SettingsPage extends Component
     {
         $this->validate([
             'language' => 'required|in:'.implode(',', config('rnvsync.available_locales')),
+            'storage_mode' => 'required|in:physical,mount',
             'mount_base' => 'required|string',
         ]);
 
         $settings->set(SettingsRepository::KEY_LANGUAGE, $this->language);
+        $settings->set(SettingsRepository::KEY_STORAGE_MODE, $this->storage_mode);
         $settings->set(SettingsRepository::KEY_MOUNT_BASE, $this->mount_base);
 
         app()->setLocale($this->language);

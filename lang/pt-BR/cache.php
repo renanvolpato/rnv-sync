@@ -21,6 +21,15 @@ return [
     'tip_pin_action' => 'Baixar agora e manter sempre neste dispositivo.',
     'tip_unpin_action' => 'Parar de manter offline (volta a ser somente online).',
     'tip_free_action' => 'Remove a cópia local; o arquivo continua disponível online.',
+
+    // Modo físico
+    'status_downloaded' => 'Disponível',
+    'status_cloud' => 'Somente na nuvem',
+    'tip_downloaded' => 'Baixado neste dispositivo — arquivo real no disco.',
+    'tip_cloud' => 'Apenas no OneDrive — ainda não baixado.',
+    'download' => 'Baixar',
+    'tip_download_action' => 'Baixar para o seu computador (arquivo real no disco).',
+    'physical_note' => 'Arquivos reais no disco, na sua pasta de sincronização. "Baixar" traz para o disco; "Liberar espaço" remove a cópia local (continua no OneDrive). Sem unidade virtual.',
     'freed' => 'Espaço liberado; o arquivo continua disponível online.',
     'freed_all' => 'Todo o cache liberado (arquivos fixados mantidos).',
     'pin_too_large' => 'Este arquivo é maior que o limite do cache. Aumente o tamanho do cache nas Configurações primeiro.',

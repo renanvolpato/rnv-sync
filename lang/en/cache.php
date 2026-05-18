@@ -21,6 +21,15 @@ return [
     'tip_pin_action' => 'Download now and always keep on this device.',
     'tip_unpin_action' => 'Stop keeping offline (becomes online only).',
     'tip_free_action' => 'Remove the local copy; the file stays available online.',
+
+    // Physical mode
+    'status_downloaded' => 'Available',
+    'status_cloud' => 'Cloud only',
+    'tip_downloaded' => 'Downloaded to this device — a real file on disk.',
+    'tip_cloud' => 'In OneDrive only — not downloaded yet.',
+    'download' => 'Download',
+    'tip_download_action' => 'Download this to your computer (real file on disk).',
+    'physical_note' => 'Real files on disk under your sync folder. "Download" brings it to disk; "Free up space" removes the local copy (stays in OneDrive). No virtual drive.',
     'freed' => 'Space freed; file stays available online.',
     'freed_all' => 'All cache freed (pinned files kept).',
     'pin_too_large' => 'This file is larger than the cache limit. Increase the cache size in Settings first.',

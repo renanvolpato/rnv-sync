@@ -4,7 +4,11 @@ use App\Events\SyncStatusChanged;
 use App\Models\Account;
 use App\Models\MountProcess;
 use App\Services\Rclone\RcloneRunner;
+use App\Services\Settings\SettingsRepository;
 use Illuminate\Support\Facades\Event;
+
+beforeEach(fn () => app(SettingsRepository::class)
+    ->set(SettingsRepository::KEY_STORAGE_MODE, 'mount'));
 
 it('restarts a dead mount up to 3 times then errors the account (EARS F3.2)', function () {
     Event::fake([SyncStatusChanged::class]);

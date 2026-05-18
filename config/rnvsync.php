@@ -64,6 +64,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Storage model
+    |--------------------------------------------------------------------------
+    |
+    | physical → real files on disk, no FUSE mount, no virtual device.
+    |            Selective per-folder/file download; file-manager emblems
+    |            (✓ downloaded / ☁ cloud-only). Default.
+    | mount    → rclone FUSE mount (Files-on-Demand). Low disk, but the
+    |            account appears as a mounted volume.
+    |
+    */
+
+    'storage_mode' => env('RNVSYNC_STORAGE_MODE', 'physical'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Internationalization
     |--------------------------------------------------------------------------
     */

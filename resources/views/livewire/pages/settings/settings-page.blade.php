@@ -12,6 +12,11 @@
                 <option value="en">English</option>
                 <option value="pt-BR">Português (Brasil)</option>
             </flux:select>
+            <flux:select wire:model="storage_mode" :label="__('settings.storage_mode')"
+                :description="__('settings.storage_mode_hint')">
+                <option value="physical">{{ __('settings.storage_physical') }}</option>
+                <option value="mount">{{ __('settings.storage_mount') }}</option>
+            </flux:select>
             <flux:input wire:model="mount_base" :label="__('settings.mount_base')" :description="__('settings.mount_base_hint')" class="font-mono" />
             <flux:button type="submit" variant="primary">{{ __('common.save') }}</flux:button>
         </form>

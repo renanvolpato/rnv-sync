@@ -5,10 +5,13 @@ use App\Models\Account;
 use App\Models\User;
 use App\Services\Rclone\RcloneResult;
 use App\Services\Rclone\RcloneRunner;
+use App\Services\Settings\SettingsRepository;
 use Livewire\Livewire;
 
 beforeEach(function () {
     config(['rnvsync.rclone.cache_dir' => sys_get_temp_dir().'/rnvsync-fb-'.uniqid()]);
+    // These exercise the FUSE/cache path explicitly.
+    app(SettingsRepository::class)->set(SettingsRepository::KEY_STORAGE_MODE, 'mount');
     $this->actingAs(User::factory()->create());
     $this->account = Account::factory()->create([
         'remote_name' => 'od1',
@@ -27,7 +30,7 @@ beforeEach(function () {
 
 it('pins a file from the browser (F3.6)', function () {
     Livewire::test(FileBrowser::class, ['account' => $this->account])
-        ->call('pin', 'report.pdf', false, 500);
+        ->call('download', 'report.pdf', false, 500);
 
     $this->assertDatabaseHas('rnvsync_file_policies', [
         'account_id' => $this->account->id,
@@ -40,7 +43,7 @@ it('warns when pinning a file larger than the cache limit (EARS F3.6)', function
     config(['rnvsync.defaults.cache' => ['free_space_fraction' => 0, 'min_gb' => 1, 'max_gb' => 1]]);
 
     Livewire::test(FileBrowser::class, ['account' => $this->account])
-        ->call('pin', 'report.pdf', false, 5 * 1024 ** 3)
+        ->call('download', 'report.pdf', false, 5 * 1024 ** 3)
         ->assertDispatched('toast', type: 'warning');
 
     $this->assertDatabaseMissing('rnvsync_file_policies', [

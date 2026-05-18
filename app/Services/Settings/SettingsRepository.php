@@ -56,6 +56,21 @@ class SettingsRepository
         return (string) $this->get(self::KEY_MOUNT_BASE, config('rnvsync.rclone.mount_base'));
     }
 
+    public const KEY_STORAGE_MODE = 'storage_mode';
+
+    /** 'physical' (real files, no FUSE) or 'mount' (FUSE on-demand). */
+    public function storageMode(): string
+    {
+        $mode = (string) $this->get(self::KEY_STORAGE_MODE, config('rnvsync.storage_mode'));
+
+        return in_array($mode, ['physical', 'mount'], true) ? $mode : 'physical';
+    }
+
+    public function isPhysical(): bool
+    {
+        return $this->storageMode() === 'physical';
+    }
+
     /**
      * Setup is complete once a panel user exists (SPEC F1.2 / EARS:
      * "WHEN no panel password is set, redirect all routes to the wizard").

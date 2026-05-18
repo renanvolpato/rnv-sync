@@ -2,20 +2,23 @@
 
 namespace App\Livewire\Pages\Accounts;
 
+use App\Jobs\DownloadPathJob;
 use App\Jobs\WarmCacheJob;
 use App\Models\Account;
 use App\Services\Accounts\AccountsService;
 use App\Services\Cache\CacheService;
+use App\Services\Files\LocalFiles;
+use App\Services\Settings\SettingsRepository;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * File browser (SPEC F1.5 + F3.5/F3.6/F3.7/F3.8).
+ * File browser (SPEC F1.5 + Files-on-Demand).
  *
- * Listing comes from `rclone lsjson`. Each entry shows its cache status
- * (online / cached / pinned) and offers pin / free-up-space actions.
- * Path is reflected in the URL so it is shareable.
+ * Physical mode (default): real files on disk; status is
+ * downloaded (✓) / cloud (☁); actions download / free.
+ * Mount mode: rclone VFS cache; status online/cached/pinned.
  */
 #[Layout('components.layouts.app')]
 class FileBrowser extends Component
@@ -27,9 +30,12 @@ class FileBrowser extends Component
 
     public bool $rcloneUnavailable = false;
 
-    public function mount(Account $account): void
+    public bool $physical = true;
+
+    public function mount(Account $account, SettingsRepository $settings): void
     {
         $this->account = $account;
+        $this->physical = $settings->isPhysical();
     }
 
     public function open(string $name): void
@@ -42,39 +48,50 @@ class FileBrowser extends Component
         $this->path = trim($path, '/');
     }
 
-    public function pin(string $name, bool $isDir, int $size, CacheService $cache): void
+    /** Physical: download to disk. Mount: pin into cache. */
+    public function download(string $name, bool $isDir, int $size): void
     {
         $full = trim($this->path.'/'.$name, '/');
 
-        if (! $cache->pin($this->account, $full, $isDir, $size)) {
-            // SPEC F3.6 EARS: file larger than cache → warn, offer increase.
-            $this->dispatch('toast', type: 'warning', message: __('cache.pin_too_large'));
+        if ($this->physical) {
+            DownloadPathJob::dispatch($this->account->id, $full);
+            $this->dispatch('toast', type: 'success', message: __('cache.pinning'));
 
             return;
         }
 
-        // Download in the background — the UI returns immediately.
-        WarmCacheJob::dispatch($this->account->id, $full);
+        $cache = app(CacheService::class);
+        if (! $cache->pin($this->account, $full, $isDir, $size)) {
+            $this->dispatch('toast', type: 'warning', message: __('cache.pin_too_large'));
 
+            return;
+        }
+        WarmCacheJob::dispatch($this->account->id, $full);
         $this->dispatch('toast', type: 'success', message: __('cache.pinning'));
     }
 
-    public function unpin(string $name, CacheService $cache): void
+    /** Physical: delete local copy (keep cloud). Mount: evict / unpin. */
+    public function free(string $name): void
     {
-        $cache->unpin($this->account, trim($this->path.'/'.$name, '/'));
-        $this->dispatch('toast', type: 'success', message: __('cache.unpinned'));
-    }
+        $full = trim($this->path.'/'.$name, '/');
 
-    public function freeUp(string $name, CacheService $cache): void
-    {
-        $cache->freeUpSpace($this->account, trim($this->path.'/'.$name, '/'));
+        if ($this->physical) {
+            app(LocalFiles::class)->free($this->account, $full);
+        } else {
+            $cache = app(CacheService::class);
+            $cache->unpin($this->account, $full);
+            $cache->freeUpSpace($this->account, $full);
+        }
+
         $this->dispatch('toast', type: 'success', message: __('cache.freed'));
     }
 
-    public function freeAll(CacheService $cache): void
+    public function freeAll(): void
     {
-        $cache->freeAllCache();
-        $this->dispatch('toast', type: 'success', message: __('cache.freed_all'));
+        if (! $this->physical) {
+            app(CacheService::class)->freeAllCache();
+            $this->dispatch('toast', type: 'success', message: __('cache.freed_all'));
+        }
     }
 
     /**
@@ -93,7 +110,7 @@ class FileBrowser extends Component
         return $crumbs;
     }
 
-    public function render(AccountsService $accounts, CacheService $cache)
+    public function render(AccountsService $accounts, CacheService $cache, LocalFiles $local)
     {
         $entries = [];
 
@@ -104,13 +121,16 @@ class FileBrowser extends Component
         }
 
         foreach ($entries as &$entry) {
-            $entry['status'] = $cache->cacheStatus($this->account, $entry['path']);
+            $entry['status'] = $this->physical
+                ? $local->status($this->account, $entry['path'])
+                : $cache->cacheStatus($this->account, $entry['path']);
         }
         unset($entry);
 
         return view('livewire.pages.accounts.file-browser', [
             'entries' => $entries,
-            'cacheStats' => $cache->stats(),
+            'physical' => $this->physical,
+            'cacheStats' => $this->physical ? null : $cache->stats(),
         ]);
     }
 }

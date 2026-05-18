@@ -8,6 +8,7 @@ use App\Events\SyncStatusChanged;
 use App\Models\Account;
 use App\Models\MountProcess;
 use App\Services\Mount\MountService;
+use App\Services\Settings\SettingsRepository;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
@@ -25,8 +26,13 @@ class MountSupervisorCommand extends Command
 
     protected $description = 'Mount active accounts and restart failed mounts';
 
-    public function handle(MountService $mounts): int
+    public function handle(MountService $mounts, SettingsRepository $settings): int
     {
+        // Physical mode uses real files (no FUSE) — nothing to mount.
+        if ($settings->isPhysical()) {
+            return self::SUCCESS;
+        }
+
         foreach (Account::where('status', Account::STATUS_ACTIVE)->get() as $account) {
             $mp = MountProcess::where('account_id', $account->id)->first();
             $key = "mount_restarts_{$account->id}";
