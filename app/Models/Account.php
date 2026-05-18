@@ -40,6 +40,7 @@ class Account extends Model
         'drive_id',
         'drive_type',
         'tenant_id',
+        'uses_bundled_client',
         'email',
         'oauth_token',
         'status',
@@ -60,6 +61,7 @@ class Account extends Model
     {
         return [
             'oauth_token' => 'encrypted',
+            'uses_bundled_client' => 'boolean',
             'quota_total_bytes' => 'integer',
             'quota_used_bytes' => 'integer',
             'last_synced_at' => 'datetime',

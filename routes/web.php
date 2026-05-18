@@ -57,6 +57,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/accounts/{account}/folders', FolderSelection::class)->name('accounts.folders');
     Route::get('/accounts/{account}/activity', SyncActivity::class)->name('accounts.activity');
 
+    // Zero-config (default) — rclone's own OAuth, no app registration.
+    Route::get('/oauth/easy', [OAuthController::class, 'easyStart'])->name('oauth.easy.start');
+    Route::get('/oauth/easy/status', [OAuthController::class, 'easyStatus'])->name('oauth.easy.status');
+
+    // Advanced — in-app flow with the user's own Microsoft Entra app.
     Route::get('/oauth/start', [OAuthController::class, 'start'])->name('oauth.start');
     Route::get('/oauth/callback', [OAuthController::class, 'callback'])->name('oauth.callback');
 

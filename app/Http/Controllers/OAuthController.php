@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Exceptions\OAuthException;
 use App\Models\Account;
 use App\Services\Accounts\AccountsService;
+use App\Services\Graph\RcloneAuthorize;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 
 /**
  * Microsoft OAuth round-trip for adding a OneDrive account (SPEC F1.4).
@@ -22,6 +25,55 @@ use Illuminate\Support\Facades\Log;
 class OAuthController extends Controller
 {
     public function __construct(private readonly AccountsService $accounts) {}
+
+    /**
+     * Zero-config sign-in (default): rclone's own OAuth — no Microsoft
+     * app registration required. Opens a waiting page that sends the
+     * user to Microsoft and polls until the token is captured.
+     */
+    public function easyStart(RcloneAuthorize $authorize): View|RedirectResponse
+    {
+        try {
+            $session = $authorize->start();
+        } catch (OAuthException $e) {
+            Log::channel('rnvsync-app')->warning('Easy OAuth start failed', ['reason' => $e->getMessage()]);
+
+            return redirect()->route('accounts.new')->withErrors(['oauth' => __($e->userMessageKey)]);
+        }
+
+        session(['easy_oauth_session' => $session['session']]);
+
+        return view('oauth.waiting', [
+            'authUrl' => $session['auth_url'],
+            'statusUrl' => route('oauth.easy.status'),
+            'cancelUrl' => route('accounts.new'),
+        ]);
+    }
+
+    /** Polled by the waiting page until rclone returns the token. */
+    public function easyStatus(Request $request, RcloneAuthorize $authorize): JsonResponse
+    {
+        $session = (string) session('easy_oauth_session');
+
+        if ($session === '') {
+            return response()->json(['state' => 'error', 'message' => __('errors.oauth_state_mismatch')]);
+        }
+
+        $status = $authorize->status($session);
+
+        if ($status['state'] === 'ready') {
+            $account = $this->accounts->completeFromToken($status['token']);
+            session()->forget('easy_oauth_session');
+
+            return response()->json([
+                'state' => 'ready',
+                'redirect' => route('dashboard'),
+                'message' => __('accounts.added_success', ['name' => $account->name]),
+            ]);
+        }
+
+        return response()->json($status);
+    }
 
     /** Kick off the flow: store CSRF state in the session, redirect to MS. */
     public function start(Request $request): RedirectResponse

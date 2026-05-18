@@ -63,7 +63,9 @@ class RcloneConfigGenerator
         return implode("\n", array_filter([
             "[{$account->remote_name}]",
             'type = onedrive',
-            "client_id = {$clientId}",
+            // Zero-config accounts use a token issued to rclone's built-in
+            // client — pinning a client_id here would mismatch it.
+            $account->uses_bundled_client ? null : "client_id = {$clientId}",
             $account->drive_id ? "drive_id = {$account->drive_id}" : null,
             "drive_type = {$driveType}",
             "token = {$token}",

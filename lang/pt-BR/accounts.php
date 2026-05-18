@@ -23,4 +23,19 @@ return [
     'col_name' => 'Nome',
     'col_size' => 'Tamanho',
     'read_only_note' => 'A listagem de arquivos é somente leitura nesta versão. A sincronização chega na v0.2.0.',
+
+    // OAuth fácil (sem configuração)
+    'easy_hint' => 'Conecte sua conta Microsoft em um clique. Sem registrar app, sem client ID — é só entrar.',
+    'no_registration_note' => 'Usa o cliente OAuth do rclone empacotado. Nada para configurar.',
+    'connecting' => 'Conectando à Microsoft',
+    'connecting_hint' => 'Uma janela de login da Microsoft deve abrir. Entre e autorize o acesso.',
+    'open_microsoft' => 'Abrir login da Microsoft',
+    'popup_blocked' => 'A janela não abriu?',
+    'open_link' => 'Abrir aqui',
+    'waiting_auth' => 'Aguardando você concluir o login…',
+
+    // Avançado (app próprio no Entra)
+    'advanced_toggle' => 'Avançado (usar meu próprio app da Microsoft)',
+    'advanced_hint' => 'Para usuários avançados ou OneDrive Business/SharePoint: registre seu app no Microsoft Entra e defina ONEDRIVE_CLIENT_ID/SECRET. Veja docs/oauth.md.',
+    'advanced_oauth_note' => 'Você será redirecionado à Microsoft. O redirect URI precisa bater com o registro do seu app.',
 ];

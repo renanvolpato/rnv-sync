@@ -47,13 +47,38 @@ class RcloneRunner
      */
     public function runBackground(array $args, array $options = []): int
     {
+        return $this->spawn($args, '/dev/null', $options['json_log'] ?? true);
+    }
+
+    /**
+     * Spawn rclone detached, capturing combined output to $logFile.
+     * Used by the zero-config OAuth flow (`rclone authorize`).
+     *
+     * @param  list<string>  $args
+     */
+    public function runBackgroundLogged(array $args, string $logFile, bool $jsonLog = false): int
+    {
+        return $this->spawn($args, $logFile, $jsonLog);
+    }
+
+    /**
+     * @param  list<string>  $args
+     */
+    private function spawn(array $args, string $outFile, bool $jsonLog): int
+    {
         $this->binary->assertAvailable();
 
-        $command = $this->buildCommand($args, $options['json_log'] ?? true);
+        // Properly shell-escape every argument (the previous version
+        // concatenated an array, producing a broken command).
+        $command = implode(' ', array_map(
+            'escapeshellarg',
+            $this->buildCommand($args, $jsonLog),
+        ));
 
         // setsid detaches from the controlling terminal so the child
         // survives the PHP request lifecycle. echo $! returns the PID.
-        $wrapped = 'setsid '.$command.' > /dev/null 2>&1 & echo $!';
+        $target = escapeshellarg($outFile);
+        $wrapped = "setsid {$command} > {$target} 2>&1 & echo \$!";
 
         $pid = trim(Process::run(['bash', '-c', $wrapped])->output());
 

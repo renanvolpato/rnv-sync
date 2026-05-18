@@ -74,6 +74,45 @@ class AccountsService
     }
 
     /**
+     * Complete zero-config ("easy") onboarding from a token issued by
+     * rclone's own OAuth. The account is flagged uses_bundled_client so
+     * the generated rclone remote omits client_id (matching the token).
+     *
+     * @param  array<string,mixed>  $token
+     */
+    public function completeFromToken(array $token): Account
+    {
+        $access = (string) ($token['access_token'] ?? '');
+        $user = $this->oauth->fetchUser($access);
+        $drive = $this->oauth->fetchDrive($access);
+
+        $account = Account::create([
+            'name' => $user['name'] ?: ($user['email'] ?: 'OneDrive'),
+            'provider' => Account::PROVIDER_PERSONAL,
+            'remote_name' => $this->uniqueRemoteName($user['email'] ?? 'onedrive'),
+            'drive_id' => $drive['drive_id'],
+            'drive_type' => $drive['drive_type'],
+            'tenant_id' => $drive['tenant_id'],
+            'uses_bundled_client' => true,
+            'email' => $user['email'],
+            'oauth_token' => json_encode($token),
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $quota = $this->oauth->fetchQuota($access);
+        if ($quota !== null) {
+            $account->update([
+                'quota_total_bytes' => $quota['total'],
+                'quota_used_bytes' => $quota['used'],
+            ]);
+        }
+
+        $this->configGenerator->regenerate();
+
+        return $account;
+    }
+
+    /**
      * Refresh quota for the dashboard (SPEC F1.6 EARS: on failure show
      * "Quota unavailable" and retry next load). Returns false on failure.
      */
