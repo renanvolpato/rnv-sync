@@ -86,9 +86,6 @@
                 @endif
 
                 @if ($isDir)
-                    @if (in_array($folder['path'], $selected, true))
-                        <flux:badge size="sm" color="emerald">{{ __('sync.selected') }}</flux:badge>
-                    @endif
                     <flux:button wire:click="open('{{ addslashes($folder['name']) }}')"
                         size="xs" variant="ghost" icon="chevron-right">
                         {{ __('sync.open_subfolders') }}

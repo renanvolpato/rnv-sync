@@ -116,7 +116,9 @@ class LocalFiles
         $this->configGenerator->regenerate();
 
         $remote = $account->remote_name.':'.ltrim($path, '/');
-        $result = $this->rclone->run(['lsjson', '-R', '--files-only=false', $remote], ['timeout' => 120]);
+        // Big OneDrives can take minutes to enumerate recursively; this
+        // runs in the queue (job timeout 1800s), so don't cap at 120s.
+        $result = $this->rclone->run(['lsjson', '-R', '--files-only=false', $remote], ['timeout' => 1700]);
 
         if (! $result->successful()) {
             return 0;
