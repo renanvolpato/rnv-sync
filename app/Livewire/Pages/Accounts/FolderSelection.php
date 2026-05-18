@@ -33,6 +33,8 @@ class FolderSelection extends Component
 
     public function mount(Account $account): void
     {
+        SyncHistory::sweepStale();
+
         $this->account = $account;
         $this->selected = $account->syncFolders()
             ->where('is_active', true)

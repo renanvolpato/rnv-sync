@@ -27,6 +27,10 @@ class SyncActivity extends Component
 
     public function mount(Account $account, SyncService $sync): void
     {
+        // Self-heal: a job killed mid-run (dev server stopped) would
+        // otherwise keep the "syncing…" spinner on forever.
+        SyncHistory::sweepStale();
+
         $this->account = $account;
         $this->paused = $sync->isPaused();
     }

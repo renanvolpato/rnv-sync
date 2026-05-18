@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Jobs\MaterializePlaceholdersJob;
 use App\Jobs\StartSyncJob;
 use App\Models\SyncFolder;
+use App\Models\SyncHistory;
 use App\Services\Sync\SyncService;
 use Illuminate\Console\Command;
 
@@ -23,6 +24,8 @@ class ScheduledSyncCommand extends Command
 
     public function handle(SyncService $sync): int
     {
+        SyncHistory::sweepStale();
+
         if ($sync->isPaused()) {
             $this->info('Sync is paused — skipping.');
 

@@ -30,6 +30,21 @@ class SyncHistory extends Model
         ];
     }
 
+    /**
+     * Mark "running" rows that outlived the longest job timeout as
+     * interrupted. Without this, a job killed mid-run (e.g. the dev
+     * server stopped) leaves the UI showing "syncing…" forever.
+     *
+     * @return int rows fixed
+     */
+    public static function sweepStale(int $minutes = 65): int
+    {
+        return static::query()
+            ->where('status', 'running')
+            ->where('started_at', '<', now()->subMinutes($minutes))
+            ->update(['status' => 'error', 'completed_at' => now()]);
+    }
+
     /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
