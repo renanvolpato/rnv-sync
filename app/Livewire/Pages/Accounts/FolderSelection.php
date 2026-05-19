@@ -157,10 +157,23 @@ class FolderSelection extends Component
             ])->dispatch($folder->id);
         }
 
-        // Folders the user unchecked → stop syncing (kept files stay).
+        // Folders the user unchecked → stop syncing AND remove their
+        // on-disk shell IF it has no real files (keep any pinned data
+        // intact). Otherwise the file manager would keep showing
+        // empty/placeholder leftovers of folders the user just
+        // deselected.
+        $deactivating = SyncFolder::where('account_id', $this->account->id)
+            ->whereNotIn('remote_path', $chosen)
+            ->where('is_active', true)
+            ->get();
         SyncFolder::where('account_id', $this->account->id)
             ->whereNotIn('remote_path', $chosen)
             ->update(['is_active' => false]);
+
+        $local = app(LocalFiles::class);
+        foreach ($deactivating as $df) {
+            $local->tryRemoveEmptyShell($df->local_path);
+        }
 
         session()->flash('status', __('sync.folders_saved'));
         $this->redirectRoute('accounts.activity', $this->account, navigate: true);

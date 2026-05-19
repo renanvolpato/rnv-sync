@@ -103,6 +103,27 @@ class LocalFiles
     }
 
     /**
+     * Drop the on-disk shell of a folder the user just unchecked, but
+     * ONLY when it holds nothing the user might miss — i.e. no file
+     * with size > 0. Cloud placeholders (0-byte) and empty subdirs go;
+     * any real file aborts and keeps the whole tree intact.
+     */
+    public function tryRemoveEmptyShell(string $absPath): bool
+    {
+        if (! is_dir($absPath)) {
+            return false;
+        }
+        foreach (File::allFiles($absPath) as $f) {
+            if ($f->getSize() > 0) {
+                return false; // keep the tree — user's real data lives here
+            }
+        }
+        File::deleteDirectory($absPath);
+
+        return true;
+    }
+
+    /**
      * "Keep online": make sure the content is safely in OneDrive, then
      * drop the local copy (leaving a 0-byte placeholder).
      *

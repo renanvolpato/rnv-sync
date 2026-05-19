@@ -132,3 +132,25 @@ it('rnvsync:nautilus-config writes the extension config', function () {
 
     File::deleteDirectory($home);
 });
+
+it('tryRemoveEmptyShell drops a placeholder-only tree', function () {
+    $base = sys_get_temp_dir().'/rnv-shell-'.uniqid();
+    File::ensureDirectoryExists($base.'/sub/deeper');
+    File::put($base.'/a.txt', '');               // placeholder (0 byte)
+    File::put($base.'/sub/b.txt', '');           // placeholder
+
+    expect(app(LocalFiles::class)->tryRemoveEmptyShell($base))->toBeTrue()
+        ->and(is_dir($base))->toBeFalse();
+});
+
+it('tryRemoveEmptyShell keeps the tree if ANY real file exists (data-safety)', function () {
+    $base = sys_get_temp_dir().'/rnv-shell-'.uniqid();
+    File::ensureDirectoryExists($base.'/sub');
+    File::put($base.'/a.txt', '');               // placeholder
+    File::put($base.'/sub/keepme.txt', 'real content here');
+
+    expect(app(LocalFiles::class)->tryRemoveEmptyShell($base))->toBeFalse()
+        ->and(File::get($base.'/sub/keepme.txt'))->toBe('real content here');
+
+    File::deleteDirectory($base);
+});
