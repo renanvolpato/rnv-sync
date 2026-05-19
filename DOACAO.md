@@ -8,7 +8,10 @@ que fizer sentido pra você. 🙏
 
 ## PIX (Brasil)
 
-**Copia e cola** (abra o app do seu banco → PIX → "Pix Copia e Cola"
+<img src="docs/images/pix.png" alt="QR Code PIX" width="240">
+
+Aponte a câmera do app do seu banco para o QR acima, **ou** use o
+**copia e cola** (abra o app do seu banco → PIX → "Pix Copia e Cola"
 → cole o código abaixo → informe o valor):
 
 ```
@@ -26,10 +29,6 @@ que fizer sentido pra você. 🙏
 > O nome do favorecido faz parte do padrão PIX e só aparece para você
 > na hora de confirmar o pagamento no app do seu banco.
 
-<!-- Opcional: adicione um QR Code limpo em docs/images/pix.png e
-     descomente a linha abaixo.
-![QR Code PIX](docs/images/pix.png)
--->
 
 ## Outras formas
 

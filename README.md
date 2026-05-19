@@ -132,9 +132,13 @@ Verifique o ambiente a qualquer momento com
 
 ## Apoie o projeto 💛
 
-O RNV Sync é gratuito e open source. Se ele te ajuda, considere apoiar
-via PIX — veja **[DOACAO.md](DOACAO.md)**. Qualquer valor ajuda a
-manter o projeto vivo. 🙏
+O RNV Sync é gratuito e open source. Se ele te ajuda, um PIX de
+qualquer valor ajuda a manter o projeto vivo. 🙏
+
+<img src="docs/images/pix.png" alt="QR Code PIX" width="220">
+
+Aponte a câmera do app do seu banco, ou use o **copia e cola** e mais
+detalhes em **[DOACAO.md](DOACAO.md)**.
 
 ## Licença
 

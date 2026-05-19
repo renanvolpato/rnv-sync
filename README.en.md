@@ -119,8 +119,13 @@ Requires PHP 8.3 with `pdo_sqlite`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Support 💛
 
-RNV Sync is free and open source. If it helps you, consider a PIX
-donation — see **[DOACAO.md](DOACAO.md)**.
+RNV Sync is free and open source. If it helps you, a PIX donation of
+any amount keeps the project alive. 🙏
+
+<img src="docs/images/pix.png" alt="PIX QR Code" width="220">
+
+Scan it with your bank app, or use the copy-paste code and details in
+**[DOACAO.md](DOACAO.md)**.
 
 ## License
 
