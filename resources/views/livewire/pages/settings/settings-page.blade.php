@@ -69,7 +69,7 @@
         <dl class="mt-4 text-sm divide-y divide-zinc-100 dark:divide-zinc-800">
             <div class="flex justify-between py-2">
                 <dt class="text-zinc-500 dark:text-zinc-400">{{ config('rnvsync.name') }}</dt>
-                <dd class="font-mono">{{ $appVersion }}</dd>
+                <dd class="font-mono">{{ $appVersion }} <span class="text-zinc-400">({{ $appRef }})</span></dd>
             </div>
             <div class="flex justify-between py-2">
                 <dt class="text-zinc-500 dark:text-zinc-400">rclone</dt>
@@ -77,6 +77,54 @@
             </div>
         </dl>
         <p class="mt-4 text-xs text-zinc-500 dark:text-zinc-400">{{ __('common.powered_by_rclone') }}</p>
+
+        {{-- One-click updates --}}
+        <div class="mt-5 border-t border-zinc-100 dark:border-zinc-800 pt-4">
+            @if ($updating)
+                <div class="flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400">
+                    <flux:icon.arrow-path class="size-4 animate-spin" />
+                    {{ __('settings.update_running') }}
+                </div>
+            @elseif (! $isGitInstall)
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('settings.update_not_git') }}</p>
+            @else
+                <div class="flex flex-wrap items-center gap-3">
+                    <flux:button wire:click="checkUpdates" variant="ghost" size="sm" icon="arrow-path"
+                        wire:loading.attr="disabled" wire:target="checkUpdates">
+                        <span wire:loading.remove wire:target="checkUpdates">{{ __('settings.update_check') }}</span>
+                        <span wire:loading wire:target="checkUpdates">{{ __('settings.update_checking') }}</span>
+                    </flux:button>
+
+                    @if (($updateStatus['available'] ?? false))
+                        <flux:button wire:click="applyUpdate" variant="primary" size="sm" icon="arrow-down-tray"
+                            wire:confirm="{{ __('settings.update_confirm') }}">
+                            {{ __('settings.update_now', ['n' => $updateStatus['behind']]) }}
+                        </flux:button>
+                    @endif
+
+                    @if ($updateStatus)
+                        <span class="text-xs text-zinc-500 dark:text-zinc-400">
+                            @if (($updateStatus['error'] ?? null))
+                                {{ __('settings.update_check_failed') }}
+                            @elseif (($updateStatus['available'] ?? false))
+                                {{ __('settings.update_available', ['n' => $updateStatus['behind']]) }}
+                            @else
+                                {{ __('settings.update_up_to_date') }}
+                            @endif
+                            · {{ $updateStatus['checked_at'] ?? '' }}
+                        </span>
+                    @endif
+                </div>
+
+                @if (! empty($updateStatus['commits']))
+                    <ul class="mt-3 text-xs text-zinc-500 dark:text-zinc-400 list-disc list-inside space-y-0.5">
+                        @foreach ($updateStatus['commits'] as $c)
+                            <li>{{ $c }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+            @endif
+        </div>
     </flux:card>
 
     {{-- Config export / import (SPEC F5.9) --}}

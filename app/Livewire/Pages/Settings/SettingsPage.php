@@ -5,6 +5,7 @@ namespace App\Livewire\Pages\Settings;
 use App\Services\Rclone\RcloneBinary;
 use App\Services\Settings\ConfigService;
 use App\Services\Settings\SettingsRepository;
+use App\Services\Update\UpdateService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Attributes\Layout;
@@ -45,6 +46,11 @@ class SettingsPage extends Component
     public string $new_password = '';
 
     public string $new_password_confirmation = '';
+
+    /** @var array<string,mixed>|null cached update status for the view */
+    public ?array $updateStatus = null;
+
+    public bool $updating = false;
 
     public function mount(SettingsRepository $settings): void
     {
@@ -132,10 +138,46 @@ class SettingsPage extends Component
         $this->redirectRoute('settings', navigate: true);
     }
 
-    public function render(RcloneBinary $binary)
+    /** Explicit "check for updates" (hits the network, then caches). */
+    public function checkUpdates(UpdateService $updater): void
     {
+        $this->updateStatus = $updater->checkForUpdates(force: true);
+
+        $msg = match (true) {
+            $this->updateStatus['error'] === 'not_git' => __('settings.update_not_git'),
+            $this->updateStatus['error'] !== null => __('settings.update_check_failed'),
+            $this->updateStatus['available'] => __('settings.update_available', ['n' => $this->updateStatus['behind']]),
+            default => __('settings.update_up_to_date'),
+        };
+        $this->dispatch('toast', type: $this->updateStatus['error'] ? 'error' : 'success', message: $msg);
+    }
+
+    /** Apply updates: launch the detached updater and tell the user. */
+    public function applyUpdate(UpdateService $updater): void
+    {
+        if (! $updater->isGitInstall()) {
+            $this->dispatch('toast', type: 'error', message: __('settings.update_not_git'));
+
+            return;
+        }
+
+        $updater->runUpdate();
+        $this->updating = true;
+        $this->updateStatus = null;
+        $this->dispatch('toast', type: 'success', message: __('settings.update_started'));
+    }
+
+    public function render(RcloneBinary $binary, UpdateService $updater)
+    {
+        // Never hit the network on render — only the last cached check.
+        if ($this->updateStatus === null) {
+            $this->updateStatus = $updater->cachedStatus();
+        }
+
         return view('livewire.pages.settings.settings-page', [
             'appVersion' => 'v1.0.0',
+            'appRef' => $updater->currentRef(),
+            'isGitInstall' => $updater->isGitInstall(),
             'rcloneVersion' => $binary->version() ?? __('settings.rclone_not_bundled'),
         ]);
     }
