@@ -103,6 +103,25 @@ class LocalFiles
     }
 
     /**
+     * Cheap "is there anything actually downloaded here?" probe.
+     * Walks the tree and early-exits on the first file with size > 0.
+     * Used to skip wasted scheduled syncs of placeholder-only folders.
+     */
+    public function hasAnyRealFile(string $absPath): bool
+    {
+        if (! is_dir($absPath)) {
+            return false;
+        }
+        foreach (File::allFiles($absPath) as $f) {
+            if ($f->getSize() > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Drop the on-disk shell of a folder the user just unchecked, but
      * ONLY when it holds nothing the user might miss — i.e. no file
      * with size > 0. Cloud placeholders (0-byte) and empty subdirs go;
