@@ -34,3 +34,15 @@ it('handles a single-segment path with spaces', function () {
         ->call('goUp')
         ->assertSet('path', '');
 });
+
+it('marks paths inside an active folder as synced, others not', function () {
+    $c = new FolderSelection;
+    $active = ['Anexos', 'PESSOAL/Sub'];
+
+    expect($c->isSynced('Anexos', $active))->toBeTrue()
+        ->and($c->isSynced('Anexos/x.txt', $active))->toBeTrue()
+        ->and($c->isSynced('PESSOAL/Sub/deep/y.txt', $active))->toBeTrue()
+        ->and($c->isSynced('PESSOAL', $active))->toBeFalse()
+        ->and($c->isSynced('Documents', $active))->toBeFalse()
+        ->and($c->isSynced('AnexosOther', $active))->toBeFalse();
+});

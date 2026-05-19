@@ -27,6 +27,8 @@ return [
     'status_cloud' => 'Apenas Online',
     'status_syncing' => 'Sincronizando…',
     'status_error' => 'Erro',
+    'status_unsynced' => 'Não sincronizado',
+    'tip_unsynced' => 'Esta pasta não está sendo sincronizada. Marque-a e clique em “Sincronizar estas pastas” para começar.',
     'tip_error' => 'A última tentativa falhou — clique para tentar de novo.',
     'tip_syncing' => 'Em andamento — baixando ou liberando este item.',
     'tip_downloaded' => 'Local — baixado neste dispositivo.',

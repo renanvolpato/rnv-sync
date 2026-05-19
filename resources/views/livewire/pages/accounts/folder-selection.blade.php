@@ -39,6 +39,7 @@
             @php
                 $st = $folder['status'] ?? 'cloud';
                 $isDir = $folder['is_dir'];
+                $synced = $folder['synced'] ?? false;
             @endphp
             <div @if ($isDir) x-on:dblclick="$wire.open(@js($folder['name']))"
                     title="{{ __('sync.open_folder_hint') }}" @endif
@@ -57,7 +58,11 @@
 
                 {{-- STATUS column --}}
                 <div class="w-44 border-l border-zinc-200 dark:border-zinc-800 pl-3">
-                    @if ($st === 'syncing')
+                    @if (! $synced)
+                        <span class="inline-flex items-center gap-1 text-zinc-400 dark:text-zinc-500 text-xs" title="{{ __('cache.tip_unsynced') }}">
+                            <flux:icon.minus-circle class="size-3.5" /> {{ __('cache.status_unsynced') }}
+                        </span>
+                    @elseif ($st === 'syncing')
                         <span class="inline-flex items-center gap-1 text-sky-600 dark:text-sky-500 text-xs" title="{{ __('cache.tip_syncing') }}">
                             <flux:icon.arrow-path class="size-3.5 animate-spin" /> {{ __('cache.status_syncing') }}
                         </span>
@@ -79,7 +84,9 @@
 
                 {{-- ACTIONS column --}}
                 <div class="w-52 border-l border-zinc-200 dark:border-zinc-800 pl-3 flex items-center justify-end gap-1">
-                    @if ($st === 'syncing')
+                    @if (! $synced)
+                        <span class="text-xs text-zinc-400 dark:text-zinc-500">{{ __('sync.tick_to_sync') }}</span>
+                    @elseif ($st === 'syncing')
                         <span class="text-xs text-zinc-400">{{ __('common.loading') }}</span>
                     @elseif ($st === 'error')
                         <span title="{{ $folder['errmsg'] ?? __('cache.tip_error') }}">

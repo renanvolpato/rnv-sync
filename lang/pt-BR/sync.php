@@ -5,6 +5,7 @@ return [
     'select_folders' => 'Selecionar pastas para sincronizar',
     'select_folders_hint' => 'Marque pastas (ou abra para escolher subpastas). Elas aparecem como arquivos na nuvem (☁) — nada é baixado até você escolher “Sempre manter neste dispositivo”.',
     'open_folder_hint' => 'Dê dois cliques para abrir esta pasta',
+    'tick_to_sync' => 'Marque para sincronizar',
     'save_selection' => 'Sincronizar estas pastas',
     'folders_saved' => 'Pastas adicionadas. Aparecem como arquivos na nuvem — mantenha itens offline conforme quiser.',
 

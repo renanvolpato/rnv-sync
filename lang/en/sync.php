@@ -5,6 +5,7 @@ return [
     'select_folders' => 'Select folders to sync',
     'select_folders_hint' => 'Tick folders (or open them and pick subfolders). They appear as cloud files (☁) — nothing is downloaded until you choose “Always keep on this device”.',
     'open_folder_hint' => 'Double-click to open this folder',
+    'tick_to_sync' => 'Tick to sync',
     'save_selection' => 'Sync these folders',
     'folders_saved' => 'Folders added. They show as cloud files — keep items offline as needed.',
 

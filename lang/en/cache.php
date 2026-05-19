@@ -27,6 +27,8 @@ return [
     'status_cloud' => 'Online only',
     'status_syncing' => 'Syncing…',
     'status_error' => 'Error',
+    'status_unsynced' => 'Not synced',
+    'tip_unsynced' => 'This folder is not being synced. Tick it and click “Sync these folders” to start.',
     'tip_error' => 'Last attempt failed — click to try again.',
     'tip_syncing' => 'In progress — downloading or freeing this item.',
     'tip_downloaded' => 'Local — downloaded to this device.',

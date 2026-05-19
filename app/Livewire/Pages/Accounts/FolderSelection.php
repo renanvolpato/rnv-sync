@@ -89,6 +89,26 @@ class FolderSelection extends Component
     }
 
     /**
+     * True when this path is itself an active sync folder or lives
+     * inside one — i.e. it is really being synced (and therefore
+     * shown in the file manager with status/actions).
+     *
+     * @param  list<string>  $active  active folder remote paths
+     */
+    public function isSynced(string $path, array $active): bool
+    {
+        $path = ltrim($path, '/');
+        foreach ($active as $f) {
+            $f = ltrim((string) $f, '/');
+            if ($f !== '' && ($path === $f || str_starts_with($path, $f.'/'))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @return list<array{label:string,path:string}>
      */
     public function breadcrumbs(): array
@@ -166,11 +186,27 @@ class FolderSelection extends Component
             // Listing failure handled by the empty state in the view.
         }
 
+        $active = $this->account->syncFolders()
+            ->where('is_active', true)->pluck('remote_path')->all();
+
         $local = app(LocalFiles::class);
-        if ($entries !== []) {
-            $local->ensurePlaceholders($this->account, $entries);
-        }
+
         foreach ($entries as &$e) {
+            $e['synced'] = $this->isSynced($e['path'], $active);
+
+            if (! $e['synced']) {
+                // Not selected for sync: no on-disk placeholder, no
+                // status/actions — it must NOT appear in the file
+                // manager until the user syncs it explicitly.
+                $e['status'] = 'unsynced';
+                $e['errmsg'] = null;
+
+                continue;
+            }
+
+            // Synced: lazily fill placeholders while browsing so the
+            // tree stays visible, and show the real per-item state.
+            $local->ensurePlaceholders($this->account, [$e]);
             $e['status'] = $local->status($this->account, $e['path']);
             $e['errmsg'] = $e['status'] === 'error'
                 ? $local->errorFor($this->account, $e['path']) : null;
