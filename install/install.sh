@@ -10,6 +10,18 @@ APP_DIR="${HOME}/.local/share/rnv-sync"
 REPO="${RNV_SYNC_REPO:-}"
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 
+# If not told explicitly, inherit the upstream URL from the checkout
+# this script came from, so the installed copy tracks the real remote
+# (GitHub) and `update.sh` can `git pull` future releases. Only fall
+# back to cloning the local path when there is no real remote.
+if [ -z "${REPO}" ] && command -v git >/dev/null \
+   && git -C "${SRC}" remote get-url origin >/dev/null 2>&1; then
+  _u="$(git -C "${SRC}" remote get-url origin)"
+  case "${_u}" in
+    https://*|git@*|git://*|ssh://*) REPO="${_u}" ;;
+  esac
+fi
+
 say() { printf '\033[1;36m==>\033[0m %s\n' "$1"; }
 
 command -v php >/dev/null || { echo "PHP 8.3+ is required."; exit 1; }
@@ -27,7 +39,7 @@ elif [ -d "${APP_DIR}/.git" ]; then
   cd "${APP_DIR}"
 elif [ -n "${REPO}" ]; then
   say "Cloning ${REPO} into ${APP_DIR}"
-  git clone --depth 1 "${REPO}" "${APP_DIR}"
+  git clone "${REPO}" "${APP_DIR}"
   cd "${APP_DIR}"
 else
   say "Installing from local checkout ${SRC} into ${APP_DIR}"
