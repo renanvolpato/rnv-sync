@@ -15,7 +15,20 @@ Install: see install/nautilus/install.sh (needs python3-nautilus).
 import json
 import os
 import subprocess
-from gi.repository import Nautilus, GObject, GLib
+
+import gi
+
+# Declare the Nautilus API version BEFORE importing it (otherwise the
+# import can silently fail on some distros — e.g. Pop!_OS — and the
+# extension never loads). Try 4.x first, fall back to 3.x.
+for _v in ("4.0", "3.0"):
+    try:
+        gi.require_version("Nautilus", _v)
+        break
+    except ValueError:
+        continue
+
+from gi.repository import Nautilus, GObject, GLib  # noqa: E402
 
 CONFIG = os.path.expanduser("~/.config/rnv-sync/extension.json")
 

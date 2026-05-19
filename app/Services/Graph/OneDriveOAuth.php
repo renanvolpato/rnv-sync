@@ -130,7 +130,21 @@ class OneDriveOAuth
         ]);
 
         if ($response->failed()) {
-            $account->update(['status' => Account::STATUS_DISCONNECTED]);
+            // Only flag the account "disconnected" on PERMANENT auth
+            // failures (expired/revoked refresh token, wrong client).
+            // A transient HTTP error (timeout, 5xx, eventual consistency
+            // right after sign-in) must NOT flip the badge — otherwise
+            // a brand-new account briefly shows "connection error" and
+            // the next page load "fixes" it on its own.
+            $err = (string) ($response->json('error') ?? '');
+            $hardFail = in_array(
+                $err,
+                ['invalid_grant', 'invalid_client', 'unauthorized_client'],
+                true,
+            );
+            if ($hardFail) {
+                $account->update(['status' => Account::STATUS_DISCONNECTED]);
+            }
 
             throw OAuthException::refreshFailed($response->json('error_description') ?? $response->body());
         }

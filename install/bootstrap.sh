@@ -87,6 +87,28 @@ install_tray_deps() {
   esac
 }
 
+# python3-nautilus is what loads our Python extension into the file
+# manager (emblems + right-click). Not always installed by default
+# (Pop!_OS, minimal Ubuntu) — without it the emblems silently never
+# show up.
+install_nautilus_python() {
+  if python3 -c "import gi; gi.require_version('Nautilus','4.0')" 2>/dev/null \
+     || python3 -c "import gi; gi.require_version('Nautilus','3.0')" 2>/dev/null; then
+    return 0
+  fi
+  say "Installing python3-nautilus (file-manager emblems)"
+  case "${DISTRO}" in
+    ubuntu|debian|pop|linuxmint)
+      ${SUDO} apt-get install -y python3-nautilus ;;
+    fedora|rhel|centos)
+      ${SUDO} dnf install -y nautilus-python ;;
+    arch|manjaro)
+      ${SUDO} pacman -S --noconfirm python-nautilus ;;
+    *)
+      warn "Unknown distro. Install python3-nautilus / nautilus-python for the file-manager integration." ;;
+  esac
+}
+
 require() { command -v "$1" >/dev/null 2>&1 || { warn "$1 is required but not found."; MISSING=1; }; }
 
 MISSING=0
@@ -97,6 +119,7 @@ require composer
 install_sqlite_ext
 install_inotify
 install_tray_deps
+install_nautilus_python
 
 if ! php -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
   warn "pdo_sqlite still not loaded. You may need to enable it in php.ini."
