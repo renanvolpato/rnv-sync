@@ -24,7 +24,7 @@ Requires PHP 8.3 with the `pdo_sqlite` extension.
 - One logical change per commit; Conventional Commits
   (`type(scope): description`).
 - Don't introduce new infra (no Redis/MySQL/SPA frameworks) — see
-  `CLAUDE.md` and `SPEC.md`.
+  `SPEC.md`.
 
 ## Scope discipline
 

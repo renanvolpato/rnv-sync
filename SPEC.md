@@ -1,7 +1,7 @@
 # Cirrus — Product Specification
 
 > Complete specification for implementation. Read this fully before starting work.
-> Governance and behavioral rules live in `CLAUDE.md`.
+> Contribution guidelines live in `CONTRIBUTING.md`.
 >
 > **Version:** 1.0
 > **Status:** Implementation-ready
@@ -302,8 +302,7 @@ All versions pinned. Upgrade only after testing.
 ## 6. Repository Structure
 
 ```
-cirrus/
-├── CLAUDE.md                    # AI constitution (auto-loaded)
+rnv-sync/
 ├── SPEC.md                      # This file
 ├── README.md                    # Public-facing intro
 ├── LICENSE                      # MIT
@@ -1358,7 +1357,7 @@ PRs squash-merged to main.
 
 ## 17. Defaults & Fallbacks
 
-This section gives the implementing AI explicit defaults when the spec is silent.
+This section gives contributors explicit defaults when the spec is silent.
 
 ### General
 
@@ -1489,4 +1488,4 @@ Before tagging v1.0, all of the following must be true:
 
 **End of Specification**
 
-This document is the contract between the project owner and the implementing AI. Any deviation should be explicitly noted in a commit message or pull request description with justification.
+This document is the project's specification. Any deviation should be explicitly noted in a commit message or pull request description with justification.

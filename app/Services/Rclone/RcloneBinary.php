@@ -10,7 +10,7 @@ use App\Exceptions\RcloneException;
  * Resolves the path to the bundled rclone binary.
  *
  * rclone is bundled with the app, never taken from the user's PATH
- * (CLAUDE.md §6, SPEC §8).
+ * (SPEC §8).
  */
 class RcloneBinary
 {

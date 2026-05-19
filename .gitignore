@@ -29,3 +29,6 @@ Thumbs.db
 *.sqlite-journal
 /storage/rclone
 /rclone/rclone
+
+# Local-only working notes (never distributed)
+/.notes/
