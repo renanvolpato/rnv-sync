@@ -29,6 +29,12 @@ loginctl disable-linger "$(whoami)" 2>/dev/null || true
 say "Stopping any leftover rclone processes"
 pkill -f "${APP_DIR}/rclone/rclone" 2>/dev/null || true
 
+say "Removing the system-tray indicator"
+pkill -f "rnv-sync-tray.py" 2>/dev/null || true
+rm -f "${HOME}/.config/autostart/rnv-sync-tray.desktop"
+rm -f "${HOME}/.local/share/icons/hicolor/scalable/apps/rnv-sync.svg"
+rm -f "${HOME}"/.local/share/icons/hicolor/scalable/apps/rnv-sync-sync-*.svg
+
 say "Removing the GNOME Files integration"
 rm -f "${EXT_DIR}/rnv-sync.py"
 rm -f "${EXT_DIR}"/__pycache__/rnv-sync.*.pyc

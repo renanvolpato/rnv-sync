@@ -71,6 +71,10 @@ say "Installing the file-manager integration (optional)"
 bash install/nautilus/install.sh \
   || say "File-manager integration skipped (install python3-nautilus, then re-run install/nautilus/install.sh)."
 
+say "Installing the system-tray indicator (optional)"
+bash install/tray/install.sh \
+  || say "Tray indicator skipped (install python3-gi + gir1.2-ayatanaappindicator3-0.1, then re-run install/tray/install.sh)."
+
 say "Done. Open http://localhost:8080"
 # Give the web service a moment to bind before opening the browser.
 for _ in 1 2 3 4 5 6 7 8 9 10; do

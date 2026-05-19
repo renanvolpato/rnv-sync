@@ -3,6 +3,7 @@
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\OAuthController;
 use App\Http\Controllers\RequirementsController;
+use App\Http\Controllers\SyncStateController;
 use App\Livewire\Pages\Accounts\AddAccount;
 use App\Livewire\Pages\Accounts\FileBrowser;
 use App\Livewire\Pages\Accounts\FolderSelection;
@@ -25,6 +26,17 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 // middleware are stripped so it renders even with no SQLite driver.
 Route::get('/requirements', [RequirementsController::class, 'index'])
     ->name('requirements')
+    ->withoutMiddleware([
+        EncryptCookies::class,
+        StartSession::class,
+        ShareErrorsFromSession::class,
+        ValidateCsrfToken::class,
+    ]);
+
+// System-tray status poll. Localhost-only, no session/CSRF so the
+// lightweight indicator can hit it every few seconds.
+Route::get('/sync-state', SyncStateController::class)
+    ->name('sync-state')
     ->withoutMiddleware([
         EncryptCookies::class,
         StartSession::class,

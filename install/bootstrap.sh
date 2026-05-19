@@ -67,6 +67,26 @@ install_inotify() {
   esac
 }
 
+install_tray_deps() {
+  if python3 -c "import gi; gi.require_version('AyatanaAppIndicator3','0.1')" 2>/dev/null \
+     || python3 -c "import gi; gi.require_version('AppIndicator3','0.1')" 2>/dev/null; then
+    return 0
+  fi
+  say "Installing the tray indicator deps (status icon next to the clock)"
+  case "${DISTRO}" in
+    ubuntu|debian|pop|linuxmint)
+      ${SUDO} apt-get install -y python3-gi gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1 ;;
+    fedora|rhel|centos)
+      ${SUDO} dnf install -y python3-gobject gtk3 libayatana-appindicator-gtk3 ;;
+    arch|manjaro)
+      ${SUDO} pacman -S --noconfirm python-gobject gtk3 libayatana-appindicator ;;
+    alpine)
+      ${SUDO} apk add --no-cache py3-gobject3 gtk+3.0 libayatana-appindicator ;;
+    *)
+      warn "Unknown distro. Install python3-gi + ayatana-appindicator for the tray." ;;
+  esac
+}
+
 require() { command -v "$1" >/dev/null 2>&1 || { warn "$1 is required but not found."; MISSING=1; }; }
 
 MISSING=0
@@ -76,6 +96,7 @@ require composer
 
 install_sqlite_ext
 install_inotify
+install_tray_deps
 
 if ! php -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
   warn "pdo_sqlite still not loaded. You may need to enable it in php.ini."

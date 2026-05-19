@@ -22,8 +22,10 @@ class EnsureSetupComplete
     public function handle(Request $request, Closure $next): Response
     {
         // The requirements preflight owns the request until the
-        // environment is ready; never bounce away from it.
-        if ($request->routeIs('requirements*')) {
+        // environment is ready; never bounce away from it. The tray
+        // status poll must also answer regardless of setup state
+        // (it's localhost-only and exposes no secrets).
+        if ($request->routeIs('requirements*') || $request->routeIs('sync-state')) {
             return $next($request);
         }
 

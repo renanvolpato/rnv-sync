@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=RNV Sync (tray)
+Comment=OneDrive sync status indicator
+Exec=python3 @APP_DIR@/install/tray/rnv-sync-tray.py
+Icon=rnv-sync
+Terminal=false
+X-GNOME-Autostart-enabled=true
+NoDisplay=true
+Categories=Utility;
