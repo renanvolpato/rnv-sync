@@ -5,7 +5,7 @@ Thanks for your interest! RNV Sync is MIT-licensed and community-driven.
 ## Getting started
 
 ```bash
-git clone <repo> && cd rnv-sync
+git clone https://github.com/renanvolpato/rnv-sync.git && cd rnv-sync
 composer install
 npm install && npm run build
 cp .env.example .env && php artisan key:generate

@@ -2,9 +2,8 @@
 # deste arquivo. O PIX não tem campo nativo — ele é exibido via o
 # link "custom" abaixo (aponta para a seção de doação do projeto).
 #
-# TODO (ao publicar): troque <owner>/<repo> pela URL real do repo.
 custom:
-  - "https://github.com/<owner>/<repo>/blob/main/DOACAO.md"
+  - "https://github.com/renanvolpato/rnv-sync/blob/main/DOACAO.md"
 
 # Quando/se você ativar o GitHub Sponsors, basta descomentar:
 # github: [<seu-usuario>]

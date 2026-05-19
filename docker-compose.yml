@@ -1,7 +1,7 @@
 # RNV Sync — primary distribution path (SPEC §11).
 #
 #   mkdir ~/rnv-sync && cd ~/rnv-sync
-#   curl -fsSL https://raw.githubusercontent.com/<owner>/rnv-sync/main/docker-compose.yml -o docker-compose.yml
+#   curl -fsSL https://raw.githubusercontent.com/renanvolpato/rnv-sync/main/docker-compose.yml -o docker-compose.yml
 #   docker compose up -d
 #
 # Then open http://localhost:8080 and complete the setup wizard.

@@ -46,8 +46,8 @@ integração de desktop) — pedindo a senha numa **janela gráfica**
 quando precisar, sem terminal de root.
 
 ```bash
-git clone https://github.com/<owner>/<repo>.git
-cd <repo>
+git clone https://github.com/renanvolpato/rnv-sync.git
+cd rnv-sync
 bash install/bootstrap.sh   # dependências do sistema
 bash install/install.sh     # instala em ~/.local/share/rnv-sync + serviços
 ```

@@ -42,8 +42,8 @@ The installer handles the rest and asks for a password in a
 **graphical dialog** when needed (no root terminal).
 
 ```bash
-git clone https://github.com/<owner>/<repo>.git
-cd <repo>
+git clone https://github.com/renanvolpato/rnv-sync.git
+cd rnv-sync
 bash install/bootstrap.sh   # system dependencies
 bash install/install.sh     # installs to ~/.local/share/rnv-sync + services
 ```

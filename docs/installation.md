@@ -10,7 +10,7 @@ requires elevated container capabilities (documented below).
 
 ```bash
 mkdir ~/rnv-sync && cd ~/rnv-sync
-curl -fsSL https://raw.githubusercontent.com/<owner>/rnv-sync/main/docker-compose.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/renanvolpato/rnv-sync/main/docker-compose.yml -o docker-compose.yml
 docker compose up -d
 ```
 
@@ -37,7 +37,7 @@ docker compose pull && docker compose up -d
 Requirements: PHP 8.3 with `pdo_sqlite`, Composer, Node 20, and FUSE.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<owner>/rnv-sync/main/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/renanvolpato/rnv-sync/main/install/install.sh | bash
 ```
 
 The script detects your distro, installs missing dependencies, clones the
