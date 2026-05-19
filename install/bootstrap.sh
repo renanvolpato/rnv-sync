@@ -128,6 +128,13 @@ DB_PATH="$(pwd)/database/database.sqlite"
 mkdir -p "$(dirname "${DB_PATH}")"
 touch "${DB_PATH}"
 chmod 600 "${DB_PATH}"
+# Pin an absolute DB path in .env: an empty/relative DB_DATABASE makes
+# Laravel's sqlite driver fail with "unable to open database file".
+if grep -q '^DB_DATABASE=' .env; then
+  sed -i "s#^DB_DATABASE=.*#DB_DATABASE=${DB_PATH}#" .env
+else
+  printf '\nDB_DATABASE=%s\n' "${DB_PATH}" >> .env
+fi
 
 say "Running migrations"
 php artisan migrate --force

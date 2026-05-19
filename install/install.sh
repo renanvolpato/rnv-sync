@@ -70,8 +70,18 @@ if [ ! -f .env ]; then
   php artisan key:generate
 fi
 
-touch storage/database.sqlite
-chmod 600 storage/database.sqlite
+say "Preparing the SQLite database"
+DB_PATH="${APP_DIR}/database/database.sqlite"
+mkdir -p "$(dirname "${DB_PATH}")"
+touch "${DB_PATH}"
+chmod 600 "${DB_PATH}"
+# Absolute DB path: systemd runs artisan with an arbitrary CWD, and an
+# empty/relative DB_DATABASE breaks the sqlite driver.
+if grep -q '^DB_DATABASE=' .env; then
+  sed -i "s#^DB_DATABASE=.*#DB_DATABASE=${DB_PATH}#" .env
+else
+  printf '\nDB_DATABASE=%s\n' "${DB_PATH}" >> .env
+fi
 php artisan migrate --force
 
 say "Installing systemd user services"
