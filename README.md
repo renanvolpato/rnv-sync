@@ -1,112 +1,149 @@
 # RNV Sync
 
-> A beautiful, self-hosted OneDrive client for Linux — powered by [rclone](https://rclone.org/).
+**Português** · [English](README.en.md)
 
-RNV Sync gives Linux users a clean, native-feeling web interface to
-manage their OneDrive accounts. It is a Laravel application that bundles
-and orchestrates rclone — the relationship mirrors GitHub Desktop's
-relationship to git: rclone is the trusted engine, RNV Sync is the
-polished UX and lifecycle layer.
+> Um cliente OneDrive bonito e self-hosted para Linux — movido pelo
+> [rclone](https://rclone.org/).
 
-> Formerly codenamed **Cirrus**. `SPEC.md` still uses the old name in
-> places; the project, table prefix (`rnvsync_`), config
-> (`config/rnvsync.php`) and default mount path (`~/RnvSync`) use the new
-> one.
+O RNV Sync dá aos usuários de Linux uma interface web limpa e com cara
+de aplicativo nativo para gerenciar contas do OneDrive: sincronização
+seletiva de pastas, arquivos sob demanda (☁ na nuvem / ✓ no
+dispositivo), upload em tempo real, ícone na bandeja do sistema e
+integração com o gerenciador de arquivos (emblemas).
 
-![Dashboard](docs/images/dashboard.png)
+É uma aplicação Laravel que empacota e orquestra o rclone — a relação
+é parecida com a do GitHub Desktop com o git: o rclone é o motor
+confiável e testado; o RNV Sync é a camada de experiência e
+gerenciamento por cima.
 
-## Why RNV Sync
+![Painel](docs/images/painel.png)
 
-- **No CLI required** — add accounts and manage sync from a browser.
-- **Your data stays local** — OAuth tokens encrypted at rest; zero telemetry.
-- **Built on rclone** — the most capable cloud sync engine available.
+## Por que usar
 
-## Built on rclone
+- **Sem terminal** — conecte contas e gerencie tudo pelo navegador.
+- **Seus dados ficam no seu PC** — tokens criptografados; **zero
+  telemetria**; o painel escuta só em `127.0.0.1`.
+- **Movido pelo rclone** — o motor de sincronização em nuvem mais
+  capaz que existe, empacotado **sem modificações**.
+- **Tempo real** — alterou um arquivo, sobe pra nuvem em segundos.
+- **Leve** — fica ocioso sem pesar na máquina.
 
-RNV Sync ships the official, **unmodified** rclone binary (version
-pinned in `config/rnvsync.php`). See `LICENSES/rclone.txt`.
+## Como funciona (rápido)
 
-## Quick install (Docker)
+1. Você conecta sua conta OneDrive (login Microsoft dentro do app).
+2. Escolhe **quais pastas** sincronizar — nada é baixado por padrão;
+   tudo aparece como nuvem ☁ no gerenciador de arquivos.
+3. Clica num arquivo/pasta para **"Manter local"** (baixa de verdade,
+   vira ✓) ou **"Apenas online"** (sobe e libera espaço, volta a ☁).
+4. Alterações locais sobem sozinhas; alterações na nuvem descem nos
+   itens que você mantém offline.
+
+## Instalação
+
+Requisitos: **PHP 8.3+**, **Composer**, **git** e Linux com systemd.
+O instalador resolve o resto (extensão SQLite, rclone, inotify,
+integração de desktop) — pedindo a senha numa **janela gráfica**
+quando precisar, sem terminal de root.
 
 ```bash
-mkdir ~/rnv-sync && cd ~/rnv-sync
-curl -fsSL https://raw.githubusercontent.com/<owner>/rnv-sync/main/docker-compose.yml -o docker-compose.yml
-docker compose up -d
+git clone https://github.com/<owner>/<repo>.git
+cd <repo>
+bash install/bootstrap.sh   # dependências do sistema
+bash install/install.sh     # instala em ~/.local/share/rnv-sync + serviços
 ```
 
-Open <http://localhost:8080> and complete the setup wizard. Native
-install: see [docs/installation.md](docs/installation.md).
+Abra <http://localhost:8080> e conclua o assistente de configuração.
+Detalhes e outras distros: [docs/installation.md](docs/installation.md).
 
-## Features
-
-- One-command Docker install; native installer with systemd user units
-- First-run setup wizard; single-user panel auth with login throttling
-- OneDrive **Personal, Business and SharePoint** via in-app Microsoft
-  OAuth (encrypted tokens, automatic refresh)
-- Bidirectional sync (`rclone bisync`) with history, manual sync,
-  scheduled sync, global pause/resume
-- Real-time progress over WebSocket (Reverb)
-- Files-on-Demand: mount, per-file cache status, pin "always offline",
-  free up space, LRU eviction protecting pinned files
-- Conflict detection & visual resolution (per-file and bulk)
-- Bandwidth limit + scheduler; per-folder advanced rclone overrides
-- Cross-account search; storage usage trends
-- Config export/import; onboarding tour; PT-BR & EN; dark mode; a11y
-
-## Screenshots
-
-| Dashboard | Files-on-Demand | Conflicts |
-|---|---|---|
-| ![](docs/images/dashboard.png) | ![](docs/images/files.png) | ![](docs/images/conflicts.png) |
-
-## Comparison
-
-| | RNV Sync | raw rclone | abraunegg/onedrive | onedriver |
-|---|---|---|---|---|
-| Web GUI | ✅ | ❌ | ❌ | ❌ |
-| Files-on-Demand | ✅ | ⚠ manual | ❌ | ✅ |
-| Multi-account | ✅ | ⚠ manual | ⚠ | ⚠ |
-| Business/SharePoint | ✅ | ✅ | ✅ | ⚠ |
-| Visual conflict resolution | ✅ | ❌ | ❌ | ❌ |
-| Bilingual UI (PT-BR/EN) | ✅ | ❌ | ❌ | ❌ |
-| Open source | ✅ (MIT) | ✅ | ✅ | ✅ |
-
-## Documentation
-
-[Installation](docs/installation.md) ·
-[Configuration](docs/configuration.md) ·
-[Usage](docs/usage.md) ·
-[Microsoft OAuth setup](docs/oauth.md) ·
-[Troubleshooting](docs/troubleshooting.md) ·
-[FAQ](docs/faq.md) ·
-[Security](docs/security.md) ·
-[Architecture](docs/architecture.md)
-
-## Development
-
-One command sets everything up — installs the PHP SQLite extension and
-all dependencies, generates `.env`/key, downloads rclone, migrates and
-builds assets (idempotent, distro-aware):
+## Atualizar
 
 ```bash
-bash install/bootstrap.sh      # or: composer setup
+bash ~/.local/share/rnv-sync/install/update.sh
+```
+
+Um comando: baixa a versão nova, atualiza dependências, aplica
+migrações, recompila a interface e reinicia os serviços. **Seus
+arquivos sincronizados não são tocados.**
+
+## Desinstalar
+
+```bash
+bash ~/.local/share/rnv-sync/install/uninstall.sh
+```
+
+Remove serviços, integrações e o app (pede confirmação). **Os
+arquivos que você já sincronizou continuam no disco.**
+
+## Telas
+
+| Selecionar pastas | Pastas sincronizadas |
+|---|---|
+| ![Selecionar pastas](docs/images/pastas.png) | ![Sincronizadas](docs/images/sincronizadas.png) |
+
+| Configurações | Tendências de armazenamento |
+|---|---|
+| ![Configurações](docs/images/config.png) | ![Tendências](docs/images/tendencias.png) |
+
+No gerenciador de arquivos, cada item mostra seu estado: ☁ apenas
+online, ⟳ sincronizando, ✓ disponível no dispositivo.
+
+![Gerenciador de arquivos](docs/images/gerenciador.png)
+
+## Funcionalidades
+
+- Assistente de primeira execução; senha do painel com proteção
+  contra força bruta
+- OneDrive **Pessoal, Empresarial e SharePoint** via OAuth da
+  Microsoft dentro do app (tokens criptografados, renovação automática)
+- Sincronização seletiva de pastas; arquivos sob demanda (manter
+  local / apenas online por item)
+- **Upload em tempo real** (vigia de arquivos) + sincronização
+  agendada de segurança
+- Ícone na **bandeja do sistema** (animado enquanto sincroniza) e
+  **emblemas no gerenciador** de arquivos
+- Detecção e resolução visual de conflitos
+- Limite de banda + agendador; busca entre contas; tendências de uso
+- Exportar/importar configuração; PT-BR e EN; tema escuro
+- Roda em segundo plano via systemd (sobrevive a logout/reboot),
+  leve e ocioso
+
+## Documentação
+
+[Instalação](docs/installation.md) ·
+[Configuração](docs/configuration.md) ·
+[Uso](docs/usage.md) ·
+[OAuth Microsoft](docs/oauth.md) ·
+[Solução de problemas](docs/troubleshooting.md) ·
+[FAQ](docs/faq.md) ·
+[Segurança](docs/security.md) ·
+[Arquitetura](docs/architecture.md)
+
+## Desenvolvimento
+
+```bash
+bash install/bootstrap.sh      # ou: composer setup
 php artisan serve --port=8080
 php artisan test
 ```
 
-Check the environment any time with `php artisan rnvsync:doctor`. If a
-requirement is missing, the app shows a WordPress-style **requirements
-screen** with the exact fix command and a "Re-check" button.
-
-Requires PHP 8.3 with the `pdo_sqlite` extension. See
+Verifique o ambiente a qualquer momento com
+`php artisan rnvsync:doctor`. Requer PHP 8.3 com `pdo_sqlite`. Veja
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## License
+## Apoie o projeto 💛
 
-MIT — see [LICENSE](LICENSE).
+O RNV Sync é gratuito e open source. Se ele te ajuda, considere apoiar
+via PIX — veja **[DOACAO.md](DOACAO.md)**. Qualquer valor ajuda a
+manter o projeto vivo. 🙏
 
-## Acknowledgments
+## Licença
 
-[rclone](https://rclone.org/), [Laravel](https://laravel.com),
-[Livewire](https://livewire.laravel.com),
-[Flux UI](https://fluxui.dev), [Tailwind CSS](https://tailwindcss.com).
+MIT — veja [LICENSE](LICENSE). O RNV Sync empacota o binário oficial
+do rclone **sem modificações**; a licença do rclone está em
+[LICENSES/rclone.txt](LICENSES/rclone.txt).
+
+## Créditos
+
+[rclone](https://rclone.org/) · [Laravel](https://laravel.com) ·
+[Livewire](https://livewire.laravel.com) ·
+[Flux UI](https://fluxui.dev) · [Tailwind CSS](https://tailwindcss.com)

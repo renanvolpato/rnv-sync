@@ -21,13 +21,10 @@ que fizer sentido pra você. 🙏
 836379ba-b09f-425f-80bd-6540b6dde86d
 ```
 
-- **Favorecido:** Renan Augusto dos Santos Volpatto
-- **Banco:** Inter
-
 > O PIX é **somente recebimento**: o código acima serve apenas para
 > te enviar uma contribuição — ninguém consegue retirar nada com ele.
-> O nome e a cidade do favorecido fazem parte do padrão PIX e
-> aparecem na confirmação do pagamento (isso é normal e esperado).
+> O nome do favorecido faz parte do padrão PIX e só aparece para você
+> na hora de confirmar o pagamento no app do seu banco.
 
 <!-- Opcional: adicione um QR Code limpo em docs/images/pix.png e
      descomente a linha abaixo.
