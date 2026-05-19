@@ -23,6 +23,7 @@ return [
     'saved' => 'Configurações salvas.',
     'password_changed' => 'Senha alterada com sucesso.',
     'rclone_not_bundled' => 'não empacotado',
+    'update_badge' => 'Atualização disponível',
     'update_check' => 'Verificar atualizações',
     'update_checking' => 'Verificando…',
     'update_up_to_date' => 'Você está atualizado.',

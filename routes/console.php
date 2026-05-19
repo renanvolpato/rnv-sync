@@ -21,3 +21,9 @@ Schedule::call(fn () => app(CacheService::class)->evictToLimit())
 
 // SPEC F5.5: daily storage usage snapshot for trends.
 Schedule::command('rnvsync:capture-usage')->dailyAt('23:55');
+
+// Background update check (twice a day) → powers the "update
+// available" badge without manual checks or network on page loads.
+Schedule::command('rnvsync:check-updates')
+    ->twiceDaily(8, 20)
+    ->withoutOverlapping();

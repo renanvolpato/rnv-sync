@@ -23,6 +23,7 @@ return [
     'saved' => 'Settings saved.',
     'password_changed' => 'Password changed successfully.',
     'rclone_not_bundled' => 'not bundled',
+    'update_badge' => 'Update available',
     'update_check' => 'Check for updates',
     'update_checking' => 'Checking…',
     'update_up_to_date' => "You're up to date.",

@@ -72,3 +72,17 @@ it('caches the status so render never hits the network', function () {
 
     expect((new UpdateService(base_path()))->cachedStatus())->not->toBeNull();
 });
+
+it('the scheduled command caches an up-to-date status', function () {
+    Cache::flush();
+    Process::fake([
+        'git fetch --quiet' => Process::result(''),
+        'git rev-parse --short HEAD' => Process::result("abc1234\n"),
+        'git rev-list --count HEAD..@{u}' => Process::result("0\n"),
+        'git rev-parse --short @{u}' => Process::result("abc1234\n"),
+    ]);
+
+    $this->artisan('rnvsync:check-updates')->assertSuccessful();
+
+    expect(app(UpdateService::class)->cachedStatus())->not->toBeNull();
+});

@@ -93,7 +93,10 @@ class UpdateService
             ), 0, 10);
         }
 
-        return tap($base, fn ($s) => Cache::put($key, $s, now()->addMinutes(10)));
+        // Persist longer than the gap between the twice-daily
+        // background checks so the "update available" badge stays
+        // visible until the next check (or until the user updates).
+        return tap($base, fn ($s) => Cache::put($key, $s, now()->addHours(13)));
     }
 
     /**
