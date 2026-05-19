@@ -51,12 +51,25 @@ class SyncChangesJob implements ShouldQueue
 
     // Skip the OneDrive Personal Vault and Trash on the recursive PUSH
     // scan (rclone can't traverse the Vault → would abort the run).
-    // These must NOT be combined with --files-from: rclone treats
+    // Also skip editor lock/temp/swap files so they never reach the
+    // cloud: a `.~lock.*` left next to a .docx makes Office Online
+    // treat the document as "in use" and refuse to open it. These
+    // patterns must NOT be combined with --files-from: rclone treats
     // "--files-from + any other filter" as a fatal config error, which
     // would silently kill the pull entirely.
     private const PUSH_EXCLUDES = [
         '--exclude', 'Cofre Pessoal/**', '--exclude', 'Personal Vault/**',
         '--exclude', '.Trash-1000/**',
+        // editor lock / autosave / swap / temp files
+        '--exclude', '.~lock.*',     // LibreOffice
+        '--exclude', '~$*',          // MS Office
+        '--exclude', '.~*',          // generic ~ tempfiles
+        '--exclude', '*.tmp',
+        '--exclude', '*.swp', '--exclude', '*.swo',  // vim
+        '--exclude', '.#*',          // emacs
+        '--exclude', '*~',           // editor backups
+        '--exclude', '.goutputstream-*', // gnome atomic write
+        '--exclude', '.DS_Store', '--exclude', 'Thumbs.db', // OS junk
     ];
 
     public function __construct(public int $syncFolderId) {}
