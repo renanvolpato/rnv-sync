@@ -19,6 +19,14 @@ fi
 say "Baixando a versão mais recente (git pull)"
 git pull --ff-only
 
+# A release may have added a new system package (inotify-tools,
+# python3-nautilus, appindicator, …). Running this AFTER the pull
+# uses the updated dep list. Each install_* check is idempotent, so
+# nothing happens unless a dep is actually missing — at most one
+# pkexec password prompt to the user.
+say "Conferindo dependências do sistema"
+bash "${APP_DIR}/install/ensure-system-deps.sh" || say "(deps do sistema ignoradas — siga sem)"
+
 say "Atualizando dependências PHP"
 composer install --no-dev --no-interaction --prefer-dist
 

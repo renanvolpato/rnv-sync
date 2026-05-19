@@ -9,105 +9,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 RCLONE_VERSION="1.67.0"
 
-say()  { printf '\033[1;36m==>\033[0m %s\n' "$1"; }
-warn() { printf '\033[1;33m!  \033[0m %s\n' "$1"; }
-
-# --- detect distro & package manager -------------------------------------
-DISTRO="unknown"
-[ -r /etc/os-release ] && DISTRO="$(. /etc/os-release; echo "${ID:-unknown}")"
-
-# Privilege escalation: prefer a graphical prompt (pkexec) so the user
-# just types their password in a dialog — no terminal needed. Fall back
-# to sudo, then to nothing if already root.
-SUDO=""
-if [ "$(id -u)" -ne 0 ]; then
-  if command -v pkexec >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
-    SUDO="pkexec"
-  else
-    SUDO="sudo"
-  fi
-fi
-
-install_sqlite_ext() {
-  if php -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
-    return 0
-  fi
-  say "Installing the PHP SQLite extension (distro: ${DISTRO})"
-  case "${DISTRO}" in
-    ubuntu|debian|pop|linuxmint)
-      ${SUDO} apt-get update -y
-      ${SUDO} apt-get install -y php8.3-sqlite3 ;;
-    fedora|rhel|centos)
-      ${SUDO} dnf install -y php-pdo ;;
-    arch|manjaro)
-      ${SUDO} pacman -S --noconfirm php-sqlite ;;
-    alpine)
-      ${SUDO} apk add --no-cache php83-pdo_sqlite php83-sqlite3 ;;
-    *)
-      warn "Unknown distro. Install the PHP pdo_sqlite extension manually." ;;
-  esac
-}
-
-install_inotify() {
-  if command -v inotifywait >/dev/null 2>&1; then
-    return 0
-  fi
-  say "Installing inotify-tools (real-time upload on file change)"
-  case "${DISTRO}" in
-    ubuntu|debian|pop|linuxmint)
-      ${SUDO} apt-get install -y inotify-tools ;;
-    fedora|rhel|centos)
-      ${SUDO} dnf install -y inotify-tools ;;
-    arch|manjaro)
-      ${SUDO} pacman -S --noconfirm inotify-tools ;;
-    alpine)
-      ${SUDO} apk add --no-cache inotify-tools ;;
-    *)
-      warn "Unknown distro. Install 'inotify-tools' for real-time sync." ;;
-  esac
-}
-
-install_tray_deps() {
-  if python3 -c "import gi; gi.require_version('AyatanaAppIndicator3','0.1')" 2>/dev/null \
-     || python3 -c "import gi; gi.require_version('AppIndicator3','0.1')" 2>/dev/null; then
-    return 0
-  fi
-  say "Installing the tray indicator deps (status icon next to the clock)"
-  case "${DISTRO}" in
-    ubuntu|debian|pop|linuxmint)
-      ${SUDO} apt-get install -y python3-gi gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1 ;;
-    fedora|rhel|centos)
-      ${SUDO} dnf install -y python3-gobject gtk3 libayatana-appindicator-gtk3 ;;
-    arch|manjaro)
-      ${SUDO} pacman -S --noconfirm python-gobject gtk3 libayatana-appindicator ;;
-    alpine)
-      ${SUDO} apk add --no-cache py3-gobject3 gtk+3.0 libayatana-appindicator ;;
-    *)
-      warn "Unknown distro. Install python3-gi + ayatana-appindicator for the tray." ;;
-  esac
-}
-
-# python3-nautilus is what loads our Python extension into the file
-# manager (emblems + right-click). Not always installed by default
-# (Pop!_OS, minimal Ubuntu) — without it the emblems silently never
-# show up.
-install_nautilus_python() {
-  if python3 -c "import gi; gi.require_version('Nautilus','4.0')" 2>/dev/null \
-     || python3 -c "import gi; gi.require_version('Nautilus','3.0')" 2>/dev/null; then
-    return 0
-  fi
-  say "Installing python3-nautilus (file-manager emblems)"
-  case "${DISTRO}" in
-    ubuntu|debian|pop|linuxmint)
-      ${SUDO} apt-get install -y python3-nautilus ;;
-    fedora|rhel|centos)
-      ${SUDO} dnf install -y nautilus-python ;;
-    arch|manjaro)
-      ${SUDO} pacman -S --noconfirm python-nautilus ;;
-    *)
-      warn "Unknown distro. Install python3-nautilus / nautilus-python for the file-manager integration." ;;
-  esac
-}
+# System dependencies live in their own script so update.sh can call
+# the same logic — one source of truth, one pkexec prompt at most.
+# shellcheck disable=SC1091
+. "$(dirname "$0")/ensure-system-deps.sh"
 
 require() { command -v "$1" >/dev/null 2>&1 || { warn "$1 is required but not found."; MISSING=1; }; }
 
