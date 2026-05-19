@@ -49,4 +49,4 @@ done
 
 echo
 say "Atualizado para: $(git describe --tags --always 2>/dev/null || git rev-parse --short HEAD)"
-echo "Pronto. Abra http://localhost:8080"
+echo "Pronto. Abra http://localhost:8770"

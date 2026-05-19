@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=@APP_DIR@
-ExecStart=@PHP@ artisan reverb:start --host=127.0.0.1 --port=8081
+ExecStart=@PHP@ artisan reverb:start --host=127.0.0.1 --port=8771
 Restart=always
 RestartSec=5
 

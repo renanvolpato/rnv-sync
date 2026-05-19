@@ -48,7 +48,7 @@ bash install/bootstrap.sh   # system dependencies
 bash install/install.sh     # installs to ~/.local/share/rnv-sync + services
 ```
 
-Open <http://localhost:8080> and finish the setup wizard. Details:
+Open <http://localhost:8770> and finish the setup wizard. Details:
 [docs/installation.md](docs/installation.md).
 
 ## Update
@@ -111,7 +111,7 @@ you already synced stay on disk.
 
 ```bash
 bash install/bootstrap.sh      # or: composer setup
-php artisan serve --port=8080
+php artisan serve --port=8770
 php artisan test
 ```
 

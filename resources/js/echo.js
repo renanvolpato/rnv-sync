@@ -15,8 +15,8 @@ if (key && key !== '${REVERB_APP_KEY}') {
             broadcaster: 'reverb',
             key,
             wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
-            wsPort: import.meta.env.VITE_REVERB_PORT ?? 8081,
-            wssPort: import.meta.env.VITE_REVERB_PORT ?? 8081,
+            wsPort: import.meta.env.VITE_REVERB_PORT ?? 8771,
+            wssPort: import.meta.env.VITE_REVERB_PORT ?? 8771,
             forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
             enabledTransports: ['ws', 'wss'],
             // Don't reconnect forever against a server that isn't running

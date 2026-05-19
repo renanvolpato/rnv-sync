@@ -1,10 +1,10 @@
 # Troubleshooting
 
-## The panel isn't reachable at localhost:8080
+## The panel isn't reachable at localhost:8770
 
 - `docker compose ps` — is the container healthy?
 - `docker compose logs rnv-sync` — look for migration or boot errors.
-- Confirm nothing else uses port 8080.
+- Confirm nothing else uses port 8770.
 
 ## "rclone is not available"
 

@@ -15,7 +15,7 @@ telemetry, analytics or phone-home. All app state is local SQLite.
 
 ## Network exposure
 
-- Default bind: `127.0.0.1:8080` only.
+- Default bind: `127.0.0.1:8770` only.
 - LAN exposure requires explicitly changing the port binding and is
   discouraged without a strong password.
 - Internet exposure is strongly discouraged; if you must, put it behind

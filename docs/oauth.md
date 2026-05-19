@@ -22,7 +22,7 @@ own (free) Microsoft Entra application.
    and personal Microsoft accounts* (covers Personal + Business +
    SharePoint).
 4. Redirect URI → platform **Web** → exactly:
-   `http://localhost:8080/oauth/callback`
+   `http://localhost:8770/oauth/callback`
    (must equal `${APP_URL}/oauth/callback` — same scheme/host/port/path).
 5. **Register**, copy the **Application (client) ID**.
 6. **Certificates & secrets** → **New client secret** → copy the
@@ -34,14 +34,14 @@ own (free) Microsoft Entra application.
 ## Configure
 
 ```dotenv
-APP_URL=http://localhost:8080
+APP_URL=http://localhost:8770
 ONEDRIVE_CLIENT_ID=<application (client) id>
 ONEDRIVE_CLIENT_SECRET=<secret value>
 ```
 
 ```bash
 php artisan config:clear
-php artisan serve --port=8080
+php artisan serve --port=8770
 ```
 
 Always open the panel at the URL in `APP_URL`. If you change the port,
@@ -76,6 +76,6 @@ Fixes:
 ## Multiple redirect URIs
 
 You can register several redirect URIs on the same app (e.g.
-`http://localhost:8080/oauth/callback` for native and
-`http://localhost:8080/oauth/callback` behind Docker). Add each one
+`http://localhost:8770/oauth/callback` for native and
+`http://localhost:8770/oauth/callback` behind Docker). Add each one
 under the app's **Authentication** blade.

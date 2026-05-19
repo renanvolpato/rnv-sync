@@ -52,7 +52,7 @@ bash install/bootstrap.sh   # dependências do sistema
 bash install/install.sh     # instala em ~/.local/share/rnv-sync + serviços
 ```
 
-Abra <http://localhost:8080> e conclua o assistente de configuração.
+Abra <http://localhost:8770> e conclua o assistente de configuração.
 Detalhes e outras distros: [docs/installation.md](docs/installation.md).
 
 ## Atualizar
@@ -122,7 +122,7 @@ online, ⟳ sincronizando, ✓ disponível no dispositivo.
 
 ```bash
 bash install/bootstrap.sh      # ou: composer setup
-php artisan serve --port=8080
+php artisan serve --port=8770
 php artisan test
 ```
 

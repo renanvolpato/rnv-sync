@@ -47,7 +47,7 @@ Cirrus is a self-hosted web application for Linux that gives users a beautiful, 
 - Conflict resolution with visual aids
 - Real-time progress and observability
 
-The application runs locally on the user's machine, accessed via web browser at `http://localhost:8080`. It can optionally be exposed beyond localhost with explicit user opt-in and password protection.
+The application runs locally on the user's machine, accessed via web browser at `http://localhost:8770`. It can optionally be exposed beyond localhost with explicit user opt-in and password protection.
 
 ### What Cirrus Is Not
 
@@ -156,7 +156,7 @@ Users coming from Windows expect a graphical, "just works" experience. Cirrus fi
 ```
 ┌───────────────────────────────────────────────────────────────┐
 │                         BROWSER                                │
-│  (User on http://localhost:8080)                              │
+│  (User on http://localhost:8770)                              │
 └────────────────────────────┬──────────────────────────────────┘
                              │ HTTP + WebSocket
                              ▼
@@ -740,7 +740,7 @@ Each feature has acceptance criteria in EARS notation where critical. All releas
 
 **Acceptance Criteria (EARS):**
 
-- WHEN a user runs `docker compose up -d` for the first time, THE SYSTEM SHALL be accessible at `http://localhost:8080` within 60 seconds.
+- WHEN a user runs `docker compose up -d` for the first time, THE SYSTEM SHALL be accessible at `http://localhost:8770` within 60 seconds.
 - WHEN no panel password is set, THE SYSTEM SHALL redirect all routes to the setup wizard.
 - WHEN the user clicks "Add OneDrive Account", THE SYSTEM SHALL initiate the Microsoft OAuth flow and redirect to Microsoft's login page.
 - WHEN OAuth completes successfully, THE SYSTEM SHALL store the token encrypted and display the account in the dashboard.
@@ -1044,7 +1044,7 @@ services:
     container_name: cirrus
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8770:8770"
     volumes:
       - ./data:/app/storage             # SQLite, logs, etc.
       - ${HOME}/Cirrus:/mnt/cirrus:rshared   # Mount point — accessible to user
@@ -1055,13 +1055,13 @@ services:
     security_opt:
       - apparmor:unconfined
     environment:
-      - APP_URL=http://localhost:8080
+      - APP_URL=http://localhost:8770
       - DB_DATABASE=/app/storage/database.sqlite
 ```
 
 Note: FUSE mounting requires elevated capabilities. Documented clearly. Rootless alternative explored post-v1.0.
 
-After first `up`, user opens `http://localhost:8080` and goes through setup wizard.
+After first `up`, user opens `http://localhost:8770` and goes through setup wizard.
 
 ### Native Install Script
 
@@ -1081,7 +1081,7 @@ Script:
 8. Runs migrations.
 9. Installs systemd user services (`~/.config/systemd/user/cirrus-*.service`).
 10. Enables and starts services.
-11. Opens browser to `http://localhost:8080`.
+11. Opens browser to `http://localhost:8770`.
 
 ### Update Mechanism
 
@@ -1124,7 +1124,7 @@ Backup script (`storage/backup.sh`) tars these into a single file. Restore scrip
 
 ### Network Exposure
 
-- Default bind: `127.0.0.1:8080`. Documented prominently.
+- Default bind: `127.0.0.1:8770`. Documented prominently.
 - LAN exposure: requires changing bind address explicitly in `docker-compose.yml` or env.
 - Internet exposure: strongly discouraged in docs; if user insists, mandatory HTTPS (reverse proxy) + strong password.
 - No telemetry, no analytics, no phone-home.

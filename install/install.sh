@@ -111,9 +111,9 @@ say "Installing the system-tray indicator (optional)"
 bash install/tray/install.sh \
   || say "Tray indicator skipped (install python3-gi + gir1.2-ayatanaappindicator3-0.1, then re-run install/tray/install.sh)."
 
-say "Done. Open http://localhost:8080"
+say "Done. Open http://localhost:8770"
 # Give the web service a moment to bind before opening the browser.
 for _ in 1 2 3 4 5 6 7 8 9 10; do
-  curl -fsS -o /dev/null http://127.0.0.1:8080 2>/dev/null && break || sleep 1
+  curl -fsS -o /dev/null http://127.0.0.1:8770 2>/dev/null && break || sleep 1
 done
-command -v xdg-open >/dev/null && xdg-open http://localhost:8080 || true
+command -v xdg-open >/dev/null && xdg-open http://localhost:8770 || true

@@ -4,7 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/renanvolpato/rnv-sync/main/docker-compose.yml -o docker-compose.yml
 #   docker compose up -d
 #
-# Then open http://localhost:8080 and complete the setup wizard.
+# Then open http://localhost:8770 and complete the setup wizard.
 
 services:
   rnv-sync:
@@ -17,8 +17,8 @@ services:
     restart: unless-stopped
     ports:
       # Bound to localhost only by default (SPEC §12). Change to
-      # "0.0.0.0:8080:8080" to expose on the LAN (requires a strong password).
-      - "127.0.0.1:8080:8080"
+      # "0.0.0.0:8770:8770" to expose on the LAN (requires a strong password).
+      - "127.0.0.1:8770:8770"
     volumes:
       - ./data:/app/storage
       - ${HOME}/RnvSync:/mnt/rnvsync:rshared
@@ -29,6 +29,6 @@ services:
     security_opt:
       - apparmor:unconfined
     environment:
-      - APP_URL=http://localhost:8080
+      - APP_URL=http://localhost:8770
       - DB_DATABASE=/app/storage/database.sqlite
       - RCLONE_MOUNT_BASE=/mnt/rnvsync

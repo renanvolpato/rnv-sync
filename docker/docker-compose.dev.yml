@@ -9,7 +9,7 @@ services:
     container_name: rnv-sync-dev
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8770:8770"
     volumes:
       - ../:/app
       - ./data:/app/storage
@@ -22,5 +22,5 @@ services:
     environment:
       - APP_ENV=local
       - APP_DEBUG=true
-      - APP_URL=http://localhost:8080
+      - APP_URL=http://localhost:8770
       - DB_DATABASE=/app/storage/database.sqlite

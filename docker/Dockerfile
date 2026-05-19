@@ -58,5 +58,5 @@ ENV APP_ENV=production \
     RCLONE_BINARY_PATH=/app/rclone/rclone \
     DB_DATABASE=/app/storage/database.sqlite
 
-EXPOSE 8080
+EXPOSE 8770
 ENTRYPOINT ["/entrypoint.sh"]

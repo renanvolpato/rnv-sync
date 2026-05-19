@@ -32,7 +32,7 @@ for _ns in ("AyatanaAppIndicator3", "AppIndicator3"):
     except (ValueError, ImportError):
         continue
 
-URL = os.environ.get("RNV_SYNC_URL", "http://127.0.0.1:8080")
+URL = os.environ.get("RNV_SYNC_URL", "http://127.0.0.1:8770")
 APP_ICON = "rnv-sync"                      # idle / everything synced
 FRAMES = [f"rnv-sync-sync-{i}" for i in range(8)]  # spinner animation
 POLL_MS = 3000

@@ -10,7 +10,7 @@ composer install
 npm install && npm run build
 cp .env.example .env && php artisan key:generate
 touch database/database.sqlite && php artisan migrate
-php artisan serve --port=8080
+php artisan serve --port=8770
 ```
 
 Requires PHP 8.3 with the `pdo_sqlite` extension.

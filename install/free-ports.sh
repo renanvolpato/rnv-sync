@@ -4,7 +4,7 @@
 # current user's own processes (no sudo).
 set -u
 
-for port in 8080 8081; do
+for port in 8770 8771; do
   if command -v fuser >/dev/null 2>&1; then
     fuser -k "${port}/tcp" >/dev/null 2>&1 || true
   else

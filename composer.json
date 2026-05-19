@@ -47,13 +47,13 @@
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "bash install/free-ports.sh",
-            "npx concurrently -c \"#93c5fd,#a7f3d0,#c4b5fd,#fbbf24,#fdba74\" \"php artisan serve --port=8080\" \"php artisan queue:listen --tries=4 --timeout=0\" \"php artisan reverb:start --port=8081\" \"php artisan schedule:work\" \"npm run dev\" --names=web,queue,reverb,cron,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#a7f3d0,#c4b5fd,#fbbf24,#fdba74\" \"php artisan serve --port=8770\" \"php artisan queue:listen --tries=4 --timeout=0\" \"php artisan reverb:start --port=8771\" \"php artisan schedule:work\" \"npm run dev\" --names=web,queue,reverb,cron,vite --kill-others"
         ],
         "start": [
             "Composer\\Config::disableProcessTimeout",
             "bash install/free-ports.sh",
             "@php artisan migrate --force",
-            "npx concurrently -c \"#93c5fd,#a7f3d0,#c4b5fd,#fbbf24\" \"php artisan serve --port=8080\" \"php artisan queue:work --tries=4 --timeout=120\" \"php artisan reverb:start --port=8081\" \"php artisan schedule:work\" --names=web,queue,reverb,cron --kill-others"
+            "npx concurrently -c \"#93c5fd,#a7f3d0,#c4b5fd,#fbbf24\" \"php artisan serve --port=8770\" \"php artisan queue:work --tries=4 --timeout=120\" \"php artisan reverb:start --port=8771\" \"php artisan schedule:work\" --names=web,queue,reverb,cron --kill-others"
         ],
         "test": [
             "@php artisan config:clear --ansi",

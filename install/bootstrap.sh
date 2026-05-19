@@ -152,5 +152,5 @@ fi
 
 php artisan config:clear >/dev/null 2>&1 || true
 
-say "Done. Start the app with:  php artisan serve --port=8080"
-say "Then open http://localhost:8080"
+say "Done. Start the app with:  php artisan serve --port=8770"
+say "Then open http://localhost:8770"

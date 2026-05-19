@@ -21,7 +21,7 @@ from an account's sync activity screen.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `APP_URL` | `http://localhost:8080` | Public URL; OAuth redirect base |
+| `APP_URL` | `http://localhost:8770` | Public URL; OAuth redirect base |
 | `DB_DATABASE` | `storage/database.sqlite` | SQLite path |
 | `RCLONE_BINARY_PATH` | `base_path('rclone/rclone')` | Bundled rclone |
 | `RCLONE_CONFIG_PATH` | `storage/rclone/rclone.conf` | Generated config |

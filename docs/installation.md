@@ -1,7 +1,7 @@
 # Installation
 
 RNV Sync runs locally on your Linux machine and is accessed in a browser
-at <http://localhost:8080>.
+at <http://localhost:8770>.
 
 ## Option A — Docker Compose (recommended)
 
@@ -14,12 +14,12 @@ curl -fsSL https://raw.githubusercontent.com/renanvolpato/rnv-sync/main/docker-c
 docker compose up -d
 ```
 
-Open <http://localhost:8080> within ~60 seconds and complete the setup
+Open <http://localhost:8770> within ~60 seconds and complete the setup
 wizard (panel password, language, mount location).
 
 ### What the compose file does
 
-- Binds the panel to `127.0.0.1:8080` only (see [security.md](security.md)).
+- Binds the panel to `127.0.0.1:8770` only (see [security.md](security.md)).
 - Mounts `./data` for the SQLite database, logs and rclone state.
 - Maps `~/RnvSync` into the container so synced files are reachable.
 - Grants `/dev/fuse`, `SYS_ADMIN` and `apparmor:unconfined` so
