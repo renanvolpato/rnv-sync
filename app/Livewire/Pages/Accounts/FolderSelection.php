@@ -14,6 +14,7 @@ use App\Services\Files\LocalFiles;
 use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
 use App\Services\Settings\SettingsRepository;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -150,7 +151,17 @@ class FolderSelection extends Component
         $entries = [];
 
         try {
-            $entries = $accounts->listRemote($this->account, $this->path);
+            // The remote listing is a network call to OneDrive — far
+            // too slow/heavy to repeat on every wire:poll tick. Cache
+            // it briefly: the poll then only recomputes the cheap
+            // disk-based status so emblems still refresh every ~5s.
+            // Navigating to another folder uses a different key →
+            // always fresh.
+            $entries = Cache::remember(
+                "rnvsync.listremote.{$this->account->id}.".md5($this->path),
+                45,
+                fn () => $accounts->listRemote($this->account, $this->path),
+            );
         } catch (\Throwable) {
             // Listing failure handled by the empty state in the view.
         }
