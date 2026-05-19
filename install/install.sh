@@ -4,22 +4,36 @@ set -euo pipefail
 
 RCLONE_VERSION="1.67.0"
 APP_DIR="${HOME}/.local/share/rnv-sync"
-REPO="${RNV_SYNC_REPO:-https://github.com/<owner>/rnv-sync.git}"
+# Source of truth, in order of preference:
+#  1. RNV_SYNC_REPO  — an explicit git URL (the public repo)
+#  2. the local checkout this script lives in (offline / private use)
+REPO="${RNV_SYNC_REPO:-}"
+SRC="$(cd "$(dirname "$0")/.." && pwd)"
 
 say() { printf '\033[1;36m==>\033[0m %s\n' "$1"; }
 
 command -v php >/dev/null || { echo "PHP 8.3+ is required."; exit 1; }
 command -v composer >/dev/null || { echo "Composer is required."; exit 1; }
+command -v git >/dev/null || { echo "git is required."; exit 1; }
 php -m | grep -qi pdo_sqlite || { echo "PHP pdo_sqlite extension is required."; exit 1; }
 
-say "Cloning into ${APP_DIR}"
-mkdir -p "${APP_DIR}"
-if [ -d "${APP_DIR}/.git" ]; then
-  git -C "${APP_DIR}" pull --ff-only
-else
+if [ "${SRC}" = "${APP_DIR}" ]; then
+  say "Updating in place at ${APP_DIR}"
+  cd "${APP_DIR}"
+  git pull --ff-only 2>/dev/null || say "Not a tracked clone — skipping git pull."
+elif [ -d "${APP_DIR}/.git" ]; then
+  say "Updating existing install at ${APP_DIR}"
+  git -C "${APP_DIR}" pull --ff-only 2>/dev/null || true
+  cd "${APP_DIR}"
+elif [ -n "${REPO}" ]; then
+  say "Cloning ${REPO} into ${APP_DIR}"
   git clone --depth 1 "${REPO}" "${APP_DIR}"
+  cd "${APP_DIR}"
+else
+  say "Installing from local checkout ${SRC} into ${APP_DIR}"
+  git clone "${SRC}" "${APP_DIR}"
+  cd "${APP_DIR}"
 fi
-cd "${APP_DIR}"
 
 say "Installing PHP dependencies"
 composer install --no-dev --no-interaction --prefer-dist
