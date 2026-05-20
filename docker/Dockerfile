@@ -1,7 +1,13 @@
 # syntax=docker/dockerfile:1
 # RNV Sync — multi-stage image (frontend assets + PHP runtime + rclone).
 
-# ---- Stage 1: frontend assets ----
+# ---- Stage 1: composer dependencies ----
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
+
+# ---- Stage 2: frontend assets ----
 FROM node:20-alpine AS assets
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -11,13 +17,12 @@ COPY vite.config.js ./
 COPY tailwind.config.js* ./
 COPY artisan ./
 COPY app app
+# resources/css/app.css both @imports vendor/livewire/flux/dist/flux.css
+# and @sources blade stubs in vendor/livewire/flux/stubs — Tailwind v4
+# needs both at build time. Copy the whole (no-dev, lean) vendor tree
+# in before Vite builds.
+COPY --from=vendor /app/vendor ./vendor
 RUN npm run build
-
-# ---- Stage 2: composer dependencies ----
-FROM composer:2 AS vendor
-WORKDIR /app
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 
 # ---- Stage 3: rclone binary (pinned) ----
 FROM alpine:3.20 AS rclone
