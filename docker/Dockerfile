@@ -50,6 +50,9 @@ COPY . .
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=assets /app/public/build ./public/build
 COPY --from=rclone /usr/local/bin/rnvsync-rclone ./rclone/rclone
+# Composer isn't bundled in php:fpm-alpine — pull it from the official
+# image just for the autoload optimisation below.
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/entrypoint.sh /entrypoint.sh
