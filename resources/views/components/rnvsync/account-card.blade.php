@@ -22,7 +22,9 @@
     </div>
 
     <div>
-        @if ($quotaOk && $percent !== null)
+        @if ($percent !== null)
+            {{-- Always show the last known quota from the DB — a transient
+                 refresh failure must not hide data the user already has. --}}
             <div class="flex justify-between text-sm mb-1">
                 <span class="text-zinc-600 dark:text-zinc-400">
                     {{ Bytes::human($account->quota_used_bytes) }} / {{ Bytes::human($account->quota_total_bytes) }}
@@ -32,6 +34,12 @@
             <div class="h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
                 <div class="h-full {{ $barColor }}" style="width: {{ min($percent, 100) }}%"></div>
             </div>
+        @elseif ($quotaOk)
+            {{-- First load, no quota fetched yet: show "loading", not "unavailable". --}}
+            <p class="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                <flux:icon.arrow-path class="size-4 animate-spin" />
+                {{ __('dashboard.quota_loading') }}
+            </p>
         @else
             <p class="text-sm text-amber-600 dark:text-amber-500 flex items-center gap-1.5">
                 <flux:icon.exclamation-triangle class="size-4" />

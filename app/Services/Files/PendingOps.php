@@ -56,6 +56,23 @@ class PendingOps
         return in_array(rtrim($absPath, '/'), self::all(), true);
     }
 
+    /**
+     * Drop entries whose local path no longer exists on disk — a job
+     * that crashed or test garbage that leaked otherwise pins the
+     * tray icon on "syncing…" forever. Returns the count removed.
+     */
+    public static function sweepStale(): int
+    {
+        $list = self::all();
+        $live = array_values(array_filter($list, fn (string $p) => file_exists($p)));
+        $dropped = count($list) - count($live);
+        if ($dropped > 0) {
+            self::write($live);
+        }
+
+        return $dropped;
+    }
+
     /** @param list<string> $list */
     private static function write(array $list): void
     {

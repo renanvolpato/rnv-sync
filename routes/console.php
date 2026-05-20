@@ -27,3 +27,10 @@ Schedule::command('rnvsync:capture-usage')->dailyAt('23:55');
 Schedule::command('rnvsync:check-updates')
     ->twiceDaily(8, 20)
     ->withoutOverlapping();
+
+// Detect folders the user renamed/deleted on the cloud and deactivate
+// them locally — keeps the panel and disk in sync with the remote
+// without the user having to babysit.
+Schedule::command('rnvsync:prune-orphan-folders')
+    ->dailyAt('03:00')
+    ->withoutOverlapping();

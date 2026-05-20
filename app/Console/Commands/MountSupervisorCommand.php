@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Events\SyncStatusChanged;
 use App\Models\Account;
 use App\Models\MountProcess;
+use App\Services\Files\PendingOps;
 use App\Services\Mount\MountService;
 use App\Services\Settings\SettingsRepository;
 use Illuminate\Console\Command;
@@ -28,6 +29,16 @@ class MountSupervisorCommand extends Command
 
     public function handle(MountService $mounts, SettingsRepository $settings): int
     {
+        // Drop any PendingOps entry whose local file no longer exists —
+        // otherwise a crashed job or stale test data pins the tray icon
+        // on "syncing…" forever.
+        $dropped = PendingOps::sweepStale();
+        if ($dropped > 0) {
+            $this->info("Swept {$dropped} stale PendingOps entr".(
+                $dropped === 1 ? 'y' : 'ies'
+            ).'.');
+        }
+
         // Physical mode uses real files (no FUSE). Self-heal: if a stale
         // rclone FUSE mount is left over (e.g. from a previous mount-mode
         // run), unmount it so the folder works as a normal directory and
