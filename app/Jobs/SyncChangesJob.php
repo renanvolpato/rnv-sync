@@ -15,6 +15,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Lightweight two-way change sync for an on-demand folder. Designed to
@@ -52,6 +53,11 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
     // already-downloaded file after a *cloud-side* edit is skipped, which
     // is rare for folders that large.
     private const MAX_PULL_FILES = 3000;
+
+    // Re-list the remote to discover website-created files at most this
+    // often per folder (seconds). The push/pull on local edits still runs
+    // every sync; only the heavy recursive lsjson is throttled.
+    private const MATERIALIZE_EVERY = 1800;
 
     public function uniqueId(): string
     {
@@ -116,8 +122,14 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
         // explicit "1b": rclone reads a unitless --min-size as KiB, so
         // bare "1" silently skipped every file < 1 KiB. "1b" = 1 byte,
         // so only our true 0-byte placeholders are excluded.
+        // --no-traverse: an on-demand folder is mostly 0-byte placeholders
+        // (e.g. PESSOAL = 1 real file among ~90k stubs). Only real files
+        // (--min-size 1b) are pushed, so checking each of those few against
+        // the remote individually is far cheaper than listing the whole
+        // ~90k-entry remote tree on every sync — which is what made the
+        // queue crawl.
         $push = $rclone->run(
-            ['copy', $local, $remote, '--min-size', '1b', '--fast-list', ...self::GENTLE, ...self::PUSH_EXCLUDES],
+            ['copy', $local, $remote, '--min-size', '1b', '--no-traverse', ...self::GENTLE, ...self::PUSH_EXCLUDES],
             ['timeout' => 1700],
         );
         $ok = $ok && $push->successful();
@@ -165,13 +177,20 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
 
         // 3) Surface NEW remote files (e.g. created on the OneDrive
         // website) as 0-byte cloud placeholders so they actually appear
-        // in the file manager. Without this the change-sync only pushed
-        // local files and pulled already-kept ones — anything created
-        // remotely stayed invisible on this machine forever. Placeholders
-        // are size 0, so the pull above never auto-downloads them: they
-        // stay online-only (☁) until the user opens or pins them, which
-        // is the on-demand contract.
-        $localFiles->materializeCloudPlaceholders($folder->account, $folder->remote_path);
+        // in the file manager. Placeholders are size 0, so the pull above
+        // never auto-downloads them: they stay online-only (☁) until the
+        // user opens or pins them, which is the on-demand contract.
+        //
+        // This is the EXPENSIVE step — a recursive lsjson over the whole
+        // remote (tens of thousands of placeholders). Run it at most once
+        // per folder per MATERIALIZE_EVERY, NOT on every change-sync: the
+        // watcher fires push/pull on each local edit (now cheap), and a
+        // file created on the *website* simply appears within that window.
+        // Without this throttle a single worker spent all its time
+        // re-listing 90k-entry folders and the queue crawled.
+        if (Cache::add('rnv-materialized-'.$folder->id, 1, self::MATERIALIZE_EVERY)) {
+            $localFiles->materializeCloudPlaceholders($folder->account, $folder->remote_path);
+        }
 
         $folder->update([
             'last_synced_at' => Carbon::now(),

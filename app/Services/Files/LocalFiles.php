@@ -242,7 +242,7 @@ class LocalFiles
         // Skip the Personal Vault/Trash: rclone can't traverse the
         // Vault and would abort the whole listing (→ 0 placeholders).
         $result = $this->rclone->run([
-            'lsjson', '-R', '--files-only=false', $remote,
+            'lsjson', '-R', '--fast-list', '--files-only=false', $remote,
             '--ignore-errors',
             '--exclude', 'Cofre Pessoal/**', '--exclude', 'Personal Vault/**',
             '--exclude', '.Trash-1000/**',
