@@ -46,11 +46,20 @@ integração de desktop) — pedindo a senha numa **janela gráfica**
 quando precisar, sem terminal de root.
 
 ```bash
-git clone https://github.com/renanvolpato/rnv-sync.git
-cd rnv-sync
-bash install/bootstrap.sh   # dependências do sistema
-bash install/install.sh     # instala em ~/.local/share/rnv-sync + serviços
+# Instala a partir de uma pasta temporária que se apaga sozinha —
+# nada fica visível na sua Pessoal.
+tmp="$(mktemp -d)"
+git clone --depth 1 https://github.com/renanvolpato/rnv-sync.git "$tmp/rnv-sync"
+bash "$tmp/rnv-sync/install/bootstrap.sh"   # dependências do sistema
+bash "$tmp/rnv-sync/install/install.sh"     # instala (oculto) em ~/.local/share/rnv-sync + serviços
+rm -rf "$tmp"                                # remove a cópia temporária do download
 ```
+
+> O aplicativo fica **oculto** em `~/.local/share/rnv-sync` (padrão Linux,
+> não aparece no gerenciador de Arquivos). A única pasta visível é a dos
+> seus **arquivos sincronizados** (`~/RnvSync`). Se você instalar com
+> `git clone` numa pasta normal, lembre de apagar essa cópia depois — ela
+> é só o download, o app real é o de `~/.local`.
 
 Abra <http://localhost:8770> e conclua o assistente de configuração.
 Detalhes e outras distros: [docs/installation.md](docs/installation.md).

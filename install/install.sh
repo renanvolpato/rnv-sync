@@ -111,6 +111,18 @@ say "Installing the system-tray indicator (optional)"
 bash install/tray/install.sh \
   || say "Tray indicator skipped (install python3-gi + gir1.2-ayatanaappindicator3-0.1, then re-run install/tray/install.sh)."
 
+# Make the layout obvious: the running app is the HIDDEN copy under
+# ~/.local; the folder the user cloned to run this script is just the
+# download. Leaving that visible next to ~/RnvSync is a common "why are
+# there two folders?" confusion — point it out so they can remove it.
+if [ "${SRC}" != "${APP_DIR}" ]; then
+  say "App installed (hidden) at: ${APP_DIR}"
+  case "${SRC}" in
+    /tmp/*) : ;; # temp checkout — the install one-liner removes it
+    *) say "This download folder is no longer needed — you can delete it: ${SRC}" ;;
+  esac
+fi
+
 say "Done. Open http://localhost:8770"
 # Give the web service a moment to bind before opening the browser.
 for _ in 1 2 3 4 5 6 7 8 9 10; do

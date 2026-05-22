@@ -42,11 +42,19 @@ The installer handles the rest and asks for a password in a
 **graphical dialog** when needed (no root terminal).
 
 ```bash
-git clone https://github.com/renanvolpato/rnv-sync.git
-cd rnv-sync
-bash install/bootstrap.sh   # system dependencies
-bash install/install.sh     # installs to ~/.local/share/rnv-sync + services
+# Install from a self-cleaning temp dir — nothing visible is left in Home.
+tmp="$(mktemp -d)"
+git clone --depth 1 https://github.com/renanvolpato/rnv-sync.git "$tmp/rnv-sync"
+bash "$tmp/rnv-sync/install/bootstrap.sh"   # system dependencies
+bash "$tmp/rnv-sync/install/install.sh"     # installs (hidden) to ~/.local/share/rnv-sync + services
+rm -rf "$tmp"                                # remove the downloaded copy
 ```
+
+> The app lives **hidden** in `~/.local/share/rnv-sync` (Linux convention,
+> not shown in the file manager). The only visible folder is your
+> **synced files** (`~/RnvSync`). If you install with a plain `git clone`,
+> remember to delete that clone afterwards — it's just the download; the
+> real app is the one under `~/.local`.
 
 Open <http://localhost:8770> and finish the setup wizard. Details:
 [docs/installation.md](docs/installation.md).
