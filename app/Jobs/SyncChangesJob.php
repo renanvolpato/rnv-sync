@@ -45,7 +45,7 @@ class SyncChangesJob implements ShouldQueue
     // OneDrive's second-level mtime precision (avoids ping-pong).
     // --ignore-errors so one bad item doesn't fail the whole run.
     private const GENTLE = [
-        '--transfers=2', '--checkers=4', '--tpslimit=6', '--ignore-errors',
+        '--transfers=4', '--checkers=8', '--tpslimit=12', '--ignore-errors',
         '--update', '--modify-window', '1s',
     ];
 

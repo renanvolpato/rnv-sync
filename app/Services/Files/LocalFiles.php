@@ -90,7 +90,13 @@ class LocalFiles
         $isDir = $this->remoteIsDir($account, $path);
         $verb = $isDir ? 'copy' : 'copyto';
 
-        $result = $this->rclone->run([$verb, $remote, $local], ['timeout' => 3600]);
+        // For a FOLDER, parallelise its files. (Benchmarked: OneDrive
+        // Personal gains nothing from --multi-thread-streams on single
+        // files — sometimes slower — so we don't use it. Single-file
+        // download speed is bounded by Microsoft's consumer throttle.)
+        $perf = $isDir ? ['--transfers=4', '--checkers=8', '--tpslimit=12'] : [];
+
+        $result = $this->rclone->run([$verb, $remote, $local, ...$perf], ['timeout' => 3600]);
 
         // Must throw on failure: the job relies on the exception to keep
         // the ⟳ state, retry, and finally surface an explicit Erro
