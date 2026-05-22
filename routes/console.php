@@ -40,3 +40,10 @@ Schedule::command('rnvsync:prune-orphan-folders')
 Schedule::command('rnvsync:adopt-local-folders')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+// Whole-drive mirror: new top-level folders created on the OneDrive
+// website appear locally as ☁ placeholders automatically (folders the
+// user removed stay removed). The local→cloud counterpart of adopt.
+Schedule::command('rnvsync:discover-remote-folders')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
