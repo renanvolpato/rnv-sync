@@ -34,6 +34,35 @@ it('reports cloud vs downloaded by real file presence', function () {
     expect($files->status($this->account, $rel))->toBe('downloaded');
 });
 
+it('status() resolves a deep placeholder-only folder as cloud (no Finder blowup)', function () {
+    // Regression: status() used File::allFiles() (Symfony Finder), which
+    // eagerly collects AND sorts the whole tree before yielding — on a big
+    // placeholder-only folder it spent 30s in SortableIterator and 500'd.
+    $files = app(LocalFiles::class);
+    $rel = 'BigCloudFolder';
+    $root = $files->localPathFor($this->account, $rel);
+
+    foreach (range(1, 40) as $i) {
+        $dir = $root.'/sub'.$i;
+        File::ensureDirectoryExists($dir);
+        File::put($dir.'/p'.$i.'.txt', ''); // 0-byte placeholder
+    }
+
+    expect($files->status($this->account, $rel))->toBe('cloud');
+});
+
+it('status() resolves a folder with a deeply-nested real file as downloaded', function () {
+    $files = app(LocalFiles::class);
+    $rel = 'MixedFolder';
+    $root = $files->localPathFor($this->account, $rel);
+
+    File::ensureDirectoryExists($root.'/a/b/c');
+    File::put($root.'/a/p.txt', '');                // placeholder
+    File::put($root.'/a/b/c/real.txt', 'content');  // a real file, buried deep
+
+    expect($files->status($this->account, $rel))->toBe('downloaded');
+});
+
 it('free() leaves a 0-byte cloud placeholder, keeping it visible', function () {
     // Upload must succeed before the local copy may be dropped.
     $this->mock(RcloneRunner::class)

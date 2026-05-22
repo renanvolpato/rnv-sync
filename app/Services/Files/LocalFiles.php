@@ -8,6 +8,7 @@ use App\Models\Account;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneRunner;
 use App\Services\Settings\SettingsRepository;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 
 /**
@@ -51,13 +52,15 @@ class LocalFiles
         if (is_dir($local)) {
             // A folder is "on this device" only if it actually holds
             // real files; a tree of 0-byte placeholders is cloud-only.
-            foreach (File::allFiles($local) as $f) {
-                if ($f->getSize() > 0) {
-                    return 'downloaded';
-                }
-            }
-
-            return 'cloud';
+            // The walk is cached briefly so the ~5s wire:poll doesn't
+            // re-scan large placeholder trees on every tick. Anything in
+            // flight already returned 'syncing'/'error' above, so a few
+            // seconds of cloud↔downloaded staleness is invisible.
+            return Cache::remember(
+                'rnvsync.dirstatus.'.md5($local),
+                10,
+                fn (): string => $this->treeHasRealFile($local) ? 'downloaded' : 'cloud',
+            );
         }
 
         if (is_file($local) && filesize($local) > 0) {
@@ -115,11 +118,37 @@ class LocalFiles
      */
     public function hasAnyRealFile(string $absPath): bool
     {
+        return $this->treeHasRealFile($absPath);
+    }
+
+    /**
+     * True if the tree under $absPath holds at least one real (size > 0)
+     * file. Walks lazily and early-exits on the first hit.
+     *
+     * Deliberately NOT File::allFiles() (Symfony Finder): Finder eagerly
+     * collects every SplFileInfo in the whole tree AND sorts them before
+     * yielding anything, so on a big placeholder-only folder it spends
+     * 30s in SortableIterator and the request 500s — and the intended
+     * early-exit never happens. RecursiveDirectoryIterator descends
+     * depth-first and stops the instant we find a real file.
+     */
+    private function treeHasRealFile(string $absPath): bool
+    {
         if (! is_dir($absPath)) {
             return false;
         }
-        foreach (File::allFiles($absPath) as $f) {
-            if ($f->getSize() > 0) {
+
+        $it = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(
+                $absPath,
+                \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_FILEINFO,
+            ),
+            \RecursiveIteratorIterator::LEAVES_ONLY,
+        );
+
+        foreach ($it as $f) {
+            /** @var \SplFileInfo $f */
+            if ($f->isFile() && $f->getSize() > 0) {
                 return true;
             }
         }
@@ -138,10 +167,8 @@ class LocalFiles
         if (! is_dir($absPath)) {
             return false;
         }
-        foreach (File::allFiles($absPath) as $f) {
-            if ($f->getSize() > 0) {
-                return false; // keep the tree — user's real data lives here
-            }
+        if ($this->treeHasRealFile($absPath)) {
+            return false; // keep the tree — user's real data lives here
         }
         File::deleteDirectory($absPath);
 
@@ -166,14 +193,7 @@ class LocalFiles
 
         if (is_dir($local)) {
             // Upload any real files in the tree, then placeholder it.
-            $hasRealFiles = false;
-            foreach (File::allFiles($local) as $f) {
-                if ($f->getSize() > 0) {
-                    $hasRealFiles = true;
-                    break;
-                }
-            }
-            if ($hasRealFiles) {
+            if ($this->treeHasRealFile($local)) {
                 $result = $this->rclone->run(['copy', $local, $remote, '--ignore-size', '--checksum'], ['timeout' => 3600]);
                 // Data-safety: never drop the local tree if the upload
                 // failed — that would lose the user's files. Throw so
