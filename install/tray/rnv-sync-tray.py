@@ -2,12 +2,12 @@
 """
 RNV Sync — system-tray indicator.
 
-Sits next to the clock (like AnyDesk): shows the app icon when
-everything is synced, and an animated spinner while syncing. Reads
-state from the always-on local web panel (GET /sync-state), so it
-adds no load of its own — just a 3s HTTP poll on localhost.
+Sits next to the clock (like AnyDesk/OneDrive): shows the app icon
+when everything is synced, an animated spinner while syncing, and a
+menu listing what is currently being synced. Reads state from the
+always-on local web panel (GET /sync-state), so it adds no load of
+its own — just a 3s HTTP poll on localhost.
 
-Menu: open the panel / quit.
 Needs: gir1.2-ayatanaappindicator3-0.1 (or the older AppIndicator3),
 python3-gi, gir1.2-gtk-3.0 — installed by install/bootstrap.sh.
 """
@@ -37,6 +37,7 @@ APP_ICON = "rnv-sync"                      # idle / everything synced
 FRAMES = [f"rnv-sync-sync-{i}" for i in range(8)]  # spinner animation
 POLL_MS = 3000
 ANIM_MS = 120
+MAX_ROWS = 12                              # cap menu length
 
 
 class Tray:
@@ -48,46 +49,76 @@ class Tray:
         )
         self.ind.set_status(_Ind.IndicatorStatus.ACTIVE)
         self.ind.set_title("RNV Sync")
-        self.ind.set_menu(self._menu())
 
         self._syncing = False
         self._frame = 0
+        self._sig = None  # last rendered menu signature (avoid flicker)
+        self._rebuild_menu(False, [], 0)
+
         GLib.timeout_add(POLL_MS, self._poll)
         GLib.timeout_add(ANIM_MS, self._animate)
         self._poll()
 
-    def _menu(self):
+    # ---- menu -----------------------------------------------------------
+    def _rebuild_menu(self, syncing, items, count):
         m = Gtk.Menu()
+
+        if syncing:
+            header = Gtk.MenuItem(label=f"Sincronizando ({count})…")
+            header.set_sensitive(False)
+            m.append(header)
+            for it in items[:MAX_ROWS]:
+                icon = "🗂  " if it.get("kind") == "folder" else "📄  "
+                row = Gtk.MenuItem(label=icon + it.get("name", "?"))
+                row.set_sensitive(False)
+                m.append(row)
+            if count > MAX_ROWS:
+                more = Gtk.MenuItem(label=f"… e mais {count - MAX_ROWS}")
+                more.set_sensitive(False)
+                m.append(more)
+        else:
+            done = Gtk.MenuItem(label="Tudo sincronizado")
+            done.set_sensitive(False)
+            m.append(done)
+
+        m.append(Gtk.SeparatorMenuItem())
 
         open_item = Gtk.MenuItem(label="Abrir RNV Sync")
         open_item.connect("activate", lambda *_: self._open())
         m.append(open_item)
-
-        m.append(Gtk.SeparatorMenuItem())
 
         quit_item = Gtk.MenuItem(label="Sair")
         quit_item.connect("activate", lambda *_: Gtk.main_quit())
         m.append(quit_item)
 
         m.show_all()
-        return m
+        self.ind.set_menu(m)
 
     def _open(self):
         subprocess.Popen(["xdg-open", URL])
 
+    # ---- polling --------------------------------------------------------
     def _poll(self):
-        syncing = False
+        syncing, items, count = False, [], 0
         try:
             with urllib.request.urlopen(URL + "/sync-state", timeout=4) as r:
-                syncing = bool(json.load(r).get("syncing"))
+                data = json.load(r)
+            syncing = bool(data.get("syncing"))
+            items = data.get("items", []) or []
+            count = int(data.get("count", len(items)))
         except Exception:
-            # Panel unreachable: treat as idle, keep polling.
-            syncing = False
+            syncing, items, count = False, [], 0
 
-        if syncing != self._syncing:
-            self._syncing = syncing
-            if not syncing:
-                self.ind.set_icon_full(APP_ICON, "RNV Sync — synced")
+        self._syncing = syncing
+        if not syncing:
+            self.ind.set_icon_full(APP_ICON, "RNV Sync — synced")
+
+        # Rebuild the menu only when the visible state actually changed.
+        sig = (syncing, count, tuple(i.get("name", "") for i in items[:MAX_ROWS]))
+        if sig != self._sig:
+            self._sig = sig
+            self._rebuild_menu(syncing, items, count)
+
         return True  # keep polling
 
     def _animate(self):

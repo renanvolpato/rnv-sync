@@ -25,3 +25,16 @@ it('flips to syncing while an item is pending', function () {
 
     PendingOps::clear($probe);
 });
+
+it('lists in-flight items (files) for the tray menu', function () {
+    $probe = '/tmp/__tray_item_'.uniqid().'/Relatorio.docx';
+    PendingOps::mark($probe);
+
+    $json = $this->get('/sync-state')->assertOk()->json();
+
+    expect($json['items'])->toBeArray()
+        ->and(collect($json['items'])->pluck('name'))->toContain('Relatorio.docx')
+        ->and($json['count'])->toBeGreaterThan(0);
+
+    PendingOps::clear($probe);
+});
