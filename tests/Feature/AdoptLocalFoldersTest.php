@@ -1,8 +1,8 @@
 <?php
 
-use App\Jobs\SyncChangesJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
+use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneResult;
 use App\Services\Rclone\RcloneRunner;
 use App\Services\Settings\SettingsRepository;
@@ -17,8 +17,7 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->base));
 
-it('adopts a locally-created folder that has real files and pushes it up', function () {
-    Queue::fake();
+it('adopts a locally-created folder that has real files and syncs it up', function () {
     $root = $this->base.'/OneDrive';
 
     // user-created folder with real content, not tracked yet
@@ -29,15 +28,21 @@ it('adopts a locally-created folder that has real files and pushes it up', funct
     File::ensureDirectoryExists($root.'/SoNuvem');
     File::put($root.'/SoNuvem/ph.txt', '');
 
+    // Small folder → adopt now pushes it up INLINE (decoupled from the
+    // transfer queue, which a huge folder can monopolise). Stub rclone so
+    // no real transfer runs; the inline sync stamps last_synced_at.
+    $this->mock(RcloneConfigGenerator::class)->shouldReceive('regenerate');
+    $this->mock(RcloneRunner::class)->shouldReceive('run')
+        ->andReturn(new RcloneResult(0, '[]', ''));
+
     $this->artisan('rnvsync:adopt-local-folders')->assertSuccessful();
 
     $adopted = SyncFolder::where('account_id', $this->account->id)
         ->where('remote_path', 'NovaPasta')->first();
     expect($adopted)->not->toBeNull()
         ->and($adopted->is_active)->toBeTrue()
+        ->and($adopted->last_synced_at)->not->toBeNull()  // inline sync ran
         ->and(SyncFolder::where('remote_path', 'SoNuvem')->exists())->toBeFalse();
-
-    Queue::assertPushed(SyncChangesJob::class, 1);
 });
 
 it('does not re-adopt an already-active folder', function () {

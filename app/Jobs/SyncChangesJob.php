@@ -15,7 +15,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\File;
 
 /**
  * Lightweight two-way change sync for an on-demand folder. Designed to
@@ -43,6 +42,16 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
     // the hundreds. The lock releases as soon as the job finishes;
     // uniqueFor is just the safety ceiling.
     public int $uniqueFor = 1800;
+
+    // Above this many real (kept-offline) files, skip the per-file pull.
+    // Re-checking tens of thousands of files against the OneDrive API
+    // every sync (tpslimit 12) blows past the timeout and monopolises
+    // the single worker — which is exactly what made one 72k-file folder
+    // freeze all sync. Such folders still PUSH local edits up and still
+    // surface NEW remote files as placeholders; only refreshing an
+    // already-downloaded file after a *cloud-side* edit is skipped, which
+    // is rare for folders that large.
+    private const MAX_PULL_FILES = 3000;
 
     public function uniqueId(): string
     {
@@ -108,33 +117,51 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
         // bare "1" silently skipped every file < 1 KiB. "1b" = 1 byte,
         // so only our true 0-byte placeholders are excluded.
         $push = $rclone->run(
-            ['copy', $local, $remote, '--min-size', '1b', ...self::GENTLE, ...self::PUSH_EXCLUDES],
+            ['copy', $local, $remote, '--min-size', '1b', '--fast-list', ...self::GENTLE, ...self::PUSH_EXCLUDES],
             ['timeout' => 1700],
         );
         $ok = $ok && $push->successful();
 
-        // 2) Pull updates for kept-offline files only. --files-from
-        // must be used WITHOUT any --exclude (rclone rejects the
-        // combination outright), so GENTLE here carries no excludes.
-        $real = [];
-        foreach (File::allFiles($local) as $f) {
-            if ($f->getSize() > 0) {
-                $real[] = ltrim(str_replace($local, '', $f->getPathname()), '/');
+        // 2) Pull updates for kept-offline files only. Build the
+        // --files-from list with a low-memory iterator, streamed straight
+        // to disk: File::allFiles() (Symfony Finder) eagerly collects AND
+        // sorts every SplFileInfo, so on a huge folder (tens of thousands
+        // of files) it exhausted the worker's memory and the process was
+        // killed mid-job (exit 12) — it then retried forever and starved
+        // every other folder. RecursiveDirectoryIterator holds one entry
+        // at a time. --files-from must be used WITHOUT any --exclude
+        // (rclone rejects the combination outright), so GENTLE here
+        // carries no excludes.
+        $listFile = tempnam(sys_get_temp_dir(), 'rnv-ff-');
+        $handle = fopen($listFile, 'w');
+        $realCount = 0;
+
+        $tree = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(
+                $local,
+                \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_FILEINFO,
+            ),
+            \RecursiveIteratorIterator::LEAVES_ONLY,
+            \RecursiveIteratorIterator::CATCH_GET_CHILD,
+        );
+
+        foreach ($tree as $f) {
+            if ($f->isFile() && $f->getSize() > 0) {
+                fwrite($handle, ltrim(str_replace($local, '', $f->getPathname()), '/')."\n");
+                $realCount++;
             }
         }
+        fclose($handle);
 
-        if ($real !== []) {
-            $listFile = tempnam(sys_get_temp_dir(), 'rnv-ff-');
-            File::put($listFile, implode("\n", $real));
-
+        if ($realCount > 0 && $realCount <= self::MAX_PULL_FILES) {
             $pull = $rclone->run(
                 ['copy', $remote, $local, '--files-from', $listFile, ...self::GENTLE],
                 ['timeout' => 1700],
             );
             $ok = $ok && $pull->successful();
-
-            @unlink($listFile);
         }
+
+        @unlink($listFile);
 
         // 3) Surface NEW remote files (e.g. created on the OneDrive
         // website) as 0-byte cloud placeholders so they actually appear

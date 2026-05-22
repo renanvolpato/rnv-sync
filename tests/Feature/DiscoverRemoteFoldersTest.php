@@ -1,8 +1,10 @@
 <?php
 
 use App\Jobs\MaterializePlaceholdersJob;
+use App\Jobs\SyncChangesJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
+use App\Services\Files\LocalFiles;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneResult;
 use App\Services\Rclone\RcloneRunner;
@@ -30,6 +32,10 @@ it('adds new top-level cloud folders, skips known ones, removed ones and the Vau
             ['Name' => 'Documentos', 'IsDir' => true],    // NEW → adopt
         ]), '')
     );
+    // Placeholders are now mirrored INLINE (decoupled from the transfer
+    // queue), so the new folder appears immediately for exactly one folder.
+    $this->mock(LocalFiles::class)
+        ->shouldReceive('materializeCloudPlaceholders')->once()->andReturn(0);
 
     $this->artisan('rnvsync:discover-remote-folders')->assertSuccessful();
 
@@ -38,7 +44,8 @@ it('adds new top-level cloud folders, skips known ones, removed ones and the Vau
         ->and(SyncFolder::where('remote_path', 'Anexos')->count())->toBe(1)            // no dupe
         ->and(SyncFolder::where('remote_path', 'Cofre Pessoal')->exists())->toBeFalse(); // Vault skipped
 
-    Queue::assertPushed(MaterializePlaceholdersJob::class, 1); // only the new folder
+    Queue::assertPushed(SyncChangesJob::class, 1);              // only the new folder's transfer
+    Queue::assertNotPushed(MaterializePlaceholdersJob::class);  // materialise is inline now
 });
 
 it('does nothing when the remote listing fails (never guesses)', function () {

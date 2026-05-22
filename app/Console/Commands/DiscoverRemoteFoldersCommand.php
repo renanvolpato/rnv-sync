@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Jobs\MaterializePlaceholdersJob;
 use App\Jobs\SyncChangesJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
+use App\Services\Files\LocalFiles;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneRunner;
 use App\Services\Settings\SettingsRepository;
@@ -32,7 +32,7 @@ class DiscoverRemoteFoldersCommand extends Command
     /** Never mirror these top-level remote entries. */
     private const SKIP = ['Cofre Pessoal', 'Personal Vault', '.Trash-1000'];
 
-    public function handle(RcloneRunner $rclone, RcloneConfigGenerator $config, SettingsRepository $settings): int
+    public function handle(RcloneRunner $rclone, RcloneConfigGenerator $config, SettingsRepository $settings, LocalFiles $files): int
     {
         $config->regenerate();
         $added = 0;
@@ -70,11 +70,16 @@ class DiscoverRemoteFoldersCommand extends Command
                     'is_active' => true,
                 ]);
 
-                // Same chain the folder-selection screen uses: mirror as
-                // placeholders, then run a normal change-sync.
-                MaterializePlaceholdersJob::withChain([
-                    new SyncChangesJob($folder->id),
-                ])->dispatch($folder->id);
+                // Mirror placeholders INLINE — not via the queue. The
+                // transfer queue can be tied up for many minutes by a
+                // huge folder, which used to leave brand-new cloud
+                // folders invisible on this machine for hours. Discovery
+                // runs in the scheduler process, and a freshly-created
+                // folder is small, so create its ☁ placeholders right
+                // here (appears immediately) and queue only the data
+                // transfer.
+                $files->materializeCloudPlaceholders($account, $name);
+                SyncChangesJob::dispatch($folder->id);
 
                 $this->info("Discovered cloud folder: {$name}");
                 $added++;

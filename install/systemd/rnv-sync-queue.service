@@ -8,7 +8,9 @@ WorkingDirectory=@APP_DIR@
 # --sleep=1 picks up a clicked "Manter Local"/"Apenas Online" within
 # ~1s instead of up to 3s; still idle-cheap. --max-time recycles the
 # worker hourly so a long-lived PHP process never bloats memory.
-ExecStart=@PHP@ artisan queue:work --sleep=1 --tries=4 --max-time=3600
+# --memory=512 keeps a large-folder sync from tripping the default
+# 128 MB ceiling (which killed the worker mid-job and stalled the queue).
+ExecStart=@PHP@ artisan queue:work --sleep=1 --tries=4 --max-time=3600 --memory=512
 Restart=always
 RestartSec=5
 Nice=10
