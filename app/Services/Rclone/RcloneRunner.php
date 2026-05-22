@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Rclone;
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -16,7 +17,20 @@ use Illuminate\Support\Facades\Process;
  */
 class RcloneRunner
 {
+    /**
+     * Verbs that actually move bytes. While one of these runs we turn on
+     * rclone's remote-control server so the tray can show a live, OneDrive
+     * -style per-file transfer queue (read via /sync-state → core/stats).
+     */
+    private const TRANSFER_VERBS = ['copy', 'copyto', 'sync', 'bisync', 'move', 'moveto'];
+
     public function __construct(private readonly RcloneBinary $binary) {}
+
+    /** Where the live-stats endpoint of the in-flight transfer is advertised. */
+    public static function rcStateFile(): string
+    {
+        return storage_path('app/rnvsync-rc.json');
+    }
 
     /**
      * Run rclone synchronously and return a structured result.
@@ -28,15 +42,95 @@ class RcloneRunner
     {
         $this->binary->assertAvailable();
 
+        // Only transfers get the live-stats server; quick listings don't
+        // need it (and shouldn't pay for a port). Always best-effort: if
+        // anything about the rc setup fails, the transfer still runs.
+        $rcPort = $this->beginLiveStats($args);
+        if ($rcPort !== null) {
+            $args = [...$args, '--rc', '--rc-addr', '127.0.0.1:'.$rcPort, '--rc-no-auth'];
+        }
+
         $command = $this->buildCommand($args, $options['json_log'] ?? false);
 
-        $result = Process::timeout($options['timeout'] ?? 120)->run($command);
+        try {
+            $result = Process::timeout($options['timeout'] ?? 120)->run($command);
+        } finally {
+            if ($rcPort !== null) {
+                $this->endLiveStats();
+            }
+        }
 
         return new RcloneResult(
             exitCode: $result->exitCode() ?? 1,
             stdout: $result->output(),
             stderr: $result->errorOutput(),
         );
+    }
+
+    /**
+     * If $args is a transfer, grab a free localhost port and advertise it
+     * so the tray can read live progress; returns the port (or null to run
+     * without live stats). Strictly best-effort — never throws.
+     *
+     * @param  list<string>  $args
+     */
+    private function beginLiveStats(array $args): ?int
+    {
+        if (! in_array($args[0] ?? '', self::TRANSFER_VERBS, true)) {
+            return null;
+        }
+
+        $port = $this->findFreePort();
+        if ($port === null) {
+            return null; // degrade gracefully — the transfer still runs
+        }
+
+        try {
+            File::put(self::rcStateFile(), (string) json_encode([
+                'port' => $port,
+                'verb' => $args[0],
+                'started_at' => time(),
+            ]));
+        } catch (\Throwable) {
+            // Stats are a nicety; a storage hiccup must not block syncing.
+        }
+
+        return $port;
+    }
+
+    private function endLiveStats(): void
+    {
+        try {
+            File::delete(self::rcStateFile());
+        } catch (\Throwable) {
+            // ignore — a stale file just yields "nothing transferring".
+        }
+    }
+
+    /**
+     * Ask the OS for a free localhost TCP port (bind :0, read it, release).
+     * The race between releasing and rclone re-binding is negligible on a
+     * single-user box where the queue runs one transfer at a time; if it
+     * ever loses, rclone would error and we'd simply lose live stats for
+     * that run — the retry picks a fresh port.
+     */
+    private function findFreePort(): ?int
+    {
+        $sock = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        if ($sock === false) {
+            return null;
+        }
+
+        $name = stream_socket_get_name($sock, false);
+        fclose($sock);
+
+        if (! is_string($name) || ($pos = strrpos($name, ':')) === false) {
+            return null;
+        }
+
+        $port = (int) substr($name, $pos + 1);
+
+        return $port > 0 ? $port : null;
     }
 
     /**
