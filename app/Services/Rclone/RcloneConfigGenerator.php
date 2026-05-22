@@ -28,10 +28,28 @@ class RcloneConfigGenerator
         $path = $this->binary->configPath();
 
         File::ensureDirectoryExists(dirname($path));
-        File::put($path, $this->build());
 
-        // Owner read/write only — config holds decrypted tokens.
-        @chmod($path, 0600);
+        // Atomic write: render into a temp file in the same directory,
+        // set 0600 (the config holds decrypted tokens), then rename over
+        // the target. rename(2) is atomic on the same filesystem, so a
+        // concurrent rclone — or a crash mid-write — never observes a
+        // truncated config. A partial config fails every transfer with
+        // "didn't find section in config file" and breaks ALL syncing
+        // until the next regenerate; the plain truncate-then-write this
+        // replaces had exactly that race (queue + scheduler + web can all
+        // regenerate at once).
+        $content = $this->build();
+        $tmp = $path.'.tmp.'.getmypid();
+        File::put($tmp, $content);
+        @chmod($tmp, 0600);
+
+        if (! @rename($tmp, $path)) {
+            // Fallback (e.g. cross-device): write in place rather than
+            // leaving the freshly-built config unwritten.
+            File::put($path, $content);
+            @chmod($path, 0600);
+            @unlink($tmp);
+        }
 
         return $path;
     }

@@ -3,6 +3,7 @@
 use App\Jobs\SyncChangesJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
+use App\Services\Files\LocalFiles;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneResult;
 use App\Services\Rclone\RcloneRunner;
@@ -39,7 +40,7 @@ it('pushes real files only (skips placeholders) and pulls just kept files', func
     $this->mock(RcloneConfigGenerator::class)->shouldReceive('regenerate');
 
     (new SyncChangesJob($this->folder->id))->handle(
-        app(RcloneRunner::class), app(RcloneConfigGenerator::class)
+        app(RcloneRunner::class), app(RcloneConfigGenerator::class), app(LocalFiles::class)
     );
 
     // 1) push: copy local -> remote, --min-size 1b (skip 0-byte
@@ -63,6 +64,13 @@ it('pushes real files only (skips placeholders) and pulls just kept files', func
         ->and($pull)->not->toContain('--exclude');
 
     expect($push)->not->toContain('--files-from'); // push is real-only
+
+    // 3) discovery: a recursive lsjson of the remote so files/subfolders
+    //    created on the website show up locally (as ☁ placeholders).
+    $discovery = collect($calls)->first(fn ($c) => ($c[0] ?? '') === 'lsjson');
+    expect($discovery)->not->toBeNull()
+        ->and($discovery)->toContain('-R')
+        ->and($discovery)->toContain('od1:Docs');
 });
 
 it('does nothing for a bisync folder', function () {
@@ -72,7 +80,7 @@ it('does nothing for a bisync folder', function () {
     $this->mock(RcloneConfigGenerator::class)->shouldNotReceive('regenerate');
 
     (new SyncChangesJob($this->folder->id))->handle(
-        app(RcloneRunner::class), app(RcloneConfigGenerator::class)
+        app(RcloneRunner::class), app(RcloneConfigGenerator::class), app(LocalFiles::class)
     );
 
     expect($this->folder->fresh()->sync_mode)->toBe('bisync');

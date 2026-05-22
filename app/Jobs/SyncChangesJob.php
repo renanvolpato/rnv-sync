@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\SyncFolder;
+use App\Services\Files\LocalFiles;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneRunner;
 use Illuminate\Bus\Queueable;
@@ -87,7 +88,7 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
 
     public function __construct(public int $syncFolderId) {}
 
-    public function handle(RcloneRunner $rclone, RcloneConfigGenerator $config): void
+    public function handle(RcloneRunner $rclone, RcloneConfigGenerator $config, LocalFiles $localFiles): void
     {
         $folder = SyncFolder::with('account')->find($this->syncFolderId);
 
@@ -134,6 +135,16 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
 
             @unlink($listFile);
         }
+
+        // 3) Surface NEW remote files (e.g. created on the OneDrive
+        // website) as 0-byte cloud placeholders so they actually appear
+        // in the file manager. Without this the change-sync only pushed
+        // local files and pulled already-kept ones — anything created
+        // remotely stayed invisible on this machine forever. Placeholders
+        // are size 0, so the pull above never auto-downloads them: they
+        // stay online-only (☁) until the user opens or pins them, which
+        // is the on-demand contract.
+        $localFiles->materializeCloudPlaceholders($folder->account, $folder->remote_path);
 
         $folder->update([
             'last_synced_at' => Carbon::now(),

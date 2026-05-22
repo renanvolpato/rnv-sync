@@ -45,11 +45,14 @@ it('scheduled command queues a job per active folder, skips when paused', functi
     Queue::assertPushed(StartSyncJob::class, 1); // still 1 — paused skipped
 });
 
-it('skips placeholder-only on-demand folders to keep the boot sync fast', function () {
+it('queues a change-sync for every active on-demand folder (so cloud additions are discovered)', function () {
     Queue::fake();
     $base = sys_get_temp_dir().'/rnv-sched-'.uniqid();
 
-    // recently synced + only placeholders → SHOULD be skipped
+    // A placeholder-only folder MUST still be queued: new files/subfolders
+    // created on the OneDrive website are only found by re-listing the
+    // remote, which the change-sync now does every run. (The old code
+    // skipped these and the additions stayed invisible for hours.)
     File::ensureDirectoryExists($base.'/empty/sub');
     File::put($base.'/empty/sub/ph.txt', '');
     SyncFolder::factory()->create([
@@ -57,7 +60,7 @@ it('skips placeholder-only on-demand folders to keep the boot sync fast', functi
         'local_path' => $base.'/empty', 'last_synced_at' => now()->subMinutes(5),
     ]);
 
-    // recently synced + has a real file → SHOULD run (pull keeps it fresh)
+    // A folder with a real file is queued as well.
     File::ensureDirectoryExists($base.'/real');
     File::put($base.'/real/keep.txt', 'real content');
     SyncFolder::factory()->create([
@@ -65,17 +68,9 @@ it('skips placeholder-only on-demand folders to keep the boot sync fast', functi
         'local_path' => $base.'/real', 'last_synced_at' => now()->subMinutes(5),
     ]);
 
-    // placeholder-only but STALE (>4h since last sync) → SHOULD run (safety net)
-    File::ensureDirectoryExists($base.'/stale');
-    File::put($base.'/stale/ph.txt', '');
-    SyncFolder::factory()->create([
-        'is_active' => true, 'sync_mode' => 'on_demand',
-        'local_path' => $base.'/stale', 'last_synced_at' => now()->subHours(6),
-    ]);
-
     $this->artisan('rnvsync:scheduled-sync')->assertSuccessful();
 
-    Queue::assertPushed(SyncChangesJob::class, 2);
+    Queue::assertPushed(SyncChangesJob::class, 2); // both, none skipped
 
     File::deleteDirectory($base);
 });
