@@ -9,6 +9,7 @@ use App\Services\Files\LocalFiles;
 use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -18,7 +19,7 @@ use Illuminate\Queue\SerializesModels;
  * Physical mode: download a remote file/folder to disk in the
  * background so the UI never blocks (a folder can be huge).
  */
-class DownloadPathJob implements ShouldQueue
+class DownloadPathJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -30,6 +31,13 @@ class DownloadPathJob implements ShouldQueue
         public int $accountId,
         public string $path,
     ) {}
+
+    public int $uniqueFor = 3600;
+
+    public function uniqueId(): string
+    {
+        return 'dl-'.$this->accountId.':'.$this->path;
+    }
 
     public function handle(LocalFiles $files): void
     {

@@ -9,6 +9,7 @@ use App\Services\Files\LocalFiles;
 use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -20,7 +21,7 @@ use Throwable;
  * nothing is lost), then drop the local copy. Runs in the background so
  * the UI shows the "syncing" state instead of doing it instantly.
  */
-class FreeOnlineJob implements ShouldQueue
+class FreeOnlineJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -32,6 +33,13 @@ class FreeOnlineJob implements ShouldQueue
         public int $accountId,
         public string $path,
     ) {}
+
+    public int $uniqueFor = 3600;
+
+    public function uniqueId(): string
+    {
+        return 'free-'.$this->accountId.':'.$this->path;
+    }
 
     public function handle(LocalFiles $files): void
     {

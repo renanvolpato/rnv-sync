@@ -8,6 +8,7 @@ use App\Models\SyncFolder;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneRunner;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -27,13 +28,25 @@ use Illuminate\Support\Facades\File;
  *
  * Low concurrency / tpslimit keep CPU, disk and API use small.
  */
-class SyncChangesJob implements ShouldQueue
+class SyncChangesJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 2;
 
     public int $timeout = 1800;
+
+    // Unique per folder while queued/running. The watcher and the
+    // scheduler both fire this often; without uniqueness a slow run
+    // (big upload + OneDrive throttling) lets duplicates pile up into
+    // the hundreds. The lock releases as soon as the job finishes;
+    // uniqueFor is just the safety ceiling.
+    public int $uniqueFor = 1800;
+
+    public function uniqueId(): string
+    {
+        return 'sync-changes-'.$this->syncFolderId;
+    }
 
     // Gentle on the machine + correct two-way sync.
     //

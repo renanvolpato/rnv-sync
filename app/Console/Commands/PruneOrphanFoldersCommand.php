@@ -54,6 +54,13 @@ class PruneOrphanFoldersCommand extends Command
                 continue;
             }
 
+            // The remote is gone BUT there are real local files here —
+            // this is a locally-created folder waiting to upload (see
+            // AdoptLocalFoldersCommand), not an orphan. Never prune it.
+            if ($files->hasAnyRealFile($f->local_path)) {
+                continue;
+            }
+
             $f->update(['is_active' => false]);
             $files->tryRemoveEmptyShell($f->local_path);
             $this->info("Pruned: #{$f->id} {$f->remote_path}");

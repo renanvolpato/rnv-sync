@@ -34,3 +34,9 @@ Schedule::command('rnvsync:check-updates')
 Schedule::command('rnvsync:prune-orphan-folders')
     ->dailyAt('03:00')
     ->withoutOverlapping();
+
+// Pick up folders the user created LOCALLY in the sync root and start
+// uploading them — "anything in the folder goes to the cloud".
+Schedule::command('rnvsync:adopt-local-folders')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
