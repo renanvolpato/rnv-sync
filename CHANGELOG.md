@@ -6,6 +6,16 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+
+- **Self-heal** (`rnvsync:heal`, scheduled every 3 minutes). A cheap, idempotent
+  safety net that clears the leftover state which could otherwise pin the tray
+  icon on "Syncing…": sync runs left `running` by a killed job, stale pending
+  download/keep-online markers (missing file or no backing job), and a dead
+  live-stats pointer. It never touches user files and never restarts the worker
+  (systemd already does that) — it only tidies bookkeeping. Runs via the
+  existing scheduler service, so it adds no new process and negligible load.
+
 ### Changed
 
 - **Online by default.** The moment a OneDrive account is connected, the

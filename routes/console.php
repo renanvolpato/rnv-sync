@@ -13,6 +13,13 @@ Schedule::command('rnvsync:mount-supervisor')
     ->everyMinute()
     ->withoutOverlapping();
 
+// Self-heal: clear stuck sync state (orphaned "running" history, stale
+// pending markers, dead live-stats pointer) so the tray icon never sticks
+// on "syncing". Cheap (a few SQLite queries) and idempotent.
+Schedule::command('rnvsync:heal')
+    ->everyThreeMinutes()
+    ->withoutOverlapping();
+
 // SPEC F3.9: enforce the cache size limit by LRU eviction (pinned safe).
 Schedule::call(fn () => app(CacheService::class)->evictToLimit())
     ->everyFiveMinutes()
