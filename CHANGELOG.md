@@ -37,6 +37,12 @@ All notable changes to RNV Sync are documented here. The format is based on
   `DB_QUEUE_RETRY_AFTER`). It must exceed the longest job timeout
   (downloads/keep-online run up to 3600s); at 90s a long sync or download was
   re-reserved while still running — wasted re-runs and a corruption risk.
+- **Moved the heavy placeholder refresh off the queue worker.** The recursive
+  remote listing now runs as its own hourly background command
+  (`rnvsync:refresh-placeholders`, scheduled with `runInBackground`), so the
+  per-folder change sync (`SyncChangesJob`) is push/pull only. A sync cycle that
+  used to pin the tray icon on "Syncing N items" for hours (a 20-min listing
+  blocking the single worker while new jobs piled up) now drains in seconds.
 
 ### Removed
 
