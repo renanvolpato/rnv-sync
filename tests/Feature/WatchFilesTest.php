@@ -33,6 +33,29 @@ it('ignores vault, trash, editor temp files and in-flight ops', function () {
     PendingOps::clear('/x/downloading.bin');
 });
 
+it('treats a lone OPEN as a hydrate trigger, but not OPEN paired with a change', function () {
+    expect($this->cmd->isOpenEvent('OPEN'))->toBeTrue()
+        ->and($this->cmd->isOpenEvent('OPEN,ISDIR'))->toBeTrue()      // a dir open (filtered later by is_file)
+        ->and($this->cmd->isOpenEvent('CLOSE_WRITE,CLOSE'))->toBeFalse()
+        ->and($this->cmd->isOpenEvent('CREATE'))->toBeFalse()
+        ->and($this->cmd->isOpenEvent('MOVED_TO'))->toBeFalse()
+        ->and($this->cmd->isOpenEvent('DELETE'))->toBeFalse();
+});
+
+it('recognises a 0-byte placeholder vs a real file, dir or missing path', function () {
+    $dir = sys_get_temp_dir().'/rnv-ph-'.uniqid();
+    File::ensureDirectoryExists($dir);
+    File::put("$dir/cloud.txt", '');     // ☁ placeholder
+    File::put("$dir/real.txt", 'data');  // downloaded
+
+    expect($this->cmd->isZeroBytePlaceholder("$dir/cloud.txt"))->toBeTrue()
+        ->and($this->cmd->isZeroBytePlaceholder("$dir/real.txt"))->toBeFalse()
+        ->and($this->cmd->isZeroBytePlaceholder($dir))->toBeFalse()
+        ->and($this->cmd->isZeroBytePlaceholder("$dir/missing"))->toBeFalse();
+
+    File::deleteDirectory($dir);
+});
+
 it('only watches active on-demand folders that exist on disk', function () {
     $base = sys_get_temp_dir().'/rnv-watch-'.uniqid();
     File::ensureDirectoryExists($base.'/exists');

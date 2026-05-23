@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Jobs\DownloadPathJob;
 use App\Jobs\SyncChangesJob;
 use App\Models\SyncFolder;
 use App\Services\Files\PendingOps;
+use App\Services\Settings\SettingsRepository;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
 
@@ -17,8 +19,14 @@ use Illuminate\Support\Facades\Process;
  * reaches OneDrive in seconds instead of waiting for the 15-minute
  * scheduler (which stays on as a safety net).
  *
- * inotify is event-driven: this process is ~0% CPU until a file
- * actually changes, then it does one small debounced sync.
+ * It also does best-effort "hydrate on open": when a single ☁ placeholder
+ * is opened, it downloads it in the background. Linux has no Cloud Files
+ * API to BLOCK the open and fetch content first (that needs FUSE), so the
+ * first open still shows the file empty — it becomes real shortly after.
+ * Only a lone open triggers it; a folder/thumbnailer scan that opens many
+ * placeholders at once is ignored, so the whole drive is never downloaded.
+ *
+ * inotify is event-driven: this process is ~0% CPU until a file is touched.
  */
 class WatchFilesCommand extends Command
 {
@@ -34,6 +42,9 @@ class WatchFilesCommand extends Command
 
     /** Re-read the active-folder set this often (folders change rarely). */
     private const REFRESH_SECONDS = 60;
+
+    /** Quiet period after the last OPEN before deciding to hydrate. */
+    private const HYDRATE_WINDOW_SECONDS = 2;
 
     /** Paths we never react to (our own placeholders / vault / noise). */
     private const IGNORE_SUBSTRINGS = [
@@ -123,15 +134,35 @@ class WatchFilesCommand extends Command
         return $match;
     }
 
+    /** True for a lone OPEN event (a hydrate request), not an open paired
+     *  with a create/write/move/delete (which is a real change). */
+    public function isOpenEvent(string $events): bool
+    {
+        return str_contains($events, 'OPEN')
+            && ! preg_match('/CREATE|CLOSE_WRITE|MODIFY|MOVED|DELETE/', $events);
+    }
+
+    /** A cloud-only item: a real, 0-byte placeholder file on disk. */
+    public function isZeroBytePlaceholder(string $path): bool
+    {
+        return is_file($path) && @filesize($path) === 0;
+    }
+
     /** @param array<int,string> $folders */
     private function watch(array $folders): void
     {
+        $hydrate = (bool) config('rnvsync.sync.hydrate_on_open', true);
+
+        $events = ['-e', 'close_write', '-e', 'create',
+            '-e', 'moved_to', '-e', 'moved_from', '-e', 'delete'];
+        if ($hydrate) {
+            $events[] = '-e';
+            $events[] = 'open';
+        }
+
         $proc = proc_open(
             array_merge(
-                ['inotifywait', '-m', '-r', '-q',
-                    '-e', 'close_write', '-e', 'create',
-                    '-e', 'moved_to', '-e', 'moved_from', '-e', 'delete',
-                    '--format', '%w%f'],
+                ['inotifywait', '-m', '-r', '-q', ...$events, '--format', '%e|%w%f'],
                 array_values($folders),
             ),
             [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
@@ -151,6 +182,8 @@ class WatchFilesCommand extends Command
         $dirty = [];
         /** @var array<int,float> $lastSync folderId => last dispatch epoch */
         $lastSync = [];
+        /** @var array<string,float> $opened placeholder path => last-open epoch */
+        $opened = [];
         $lastRefresh = microtime(true);
 
         while (true) {
@@ -162,10 +195,26 @@ class WatchFilesCommand extends Command
             $w = $e = null;
             if (stream_select($read, $w, $e, 1) > 0) {
                 while (($line = fgets($pipes[1])) !== false) {
-                    $path = trim($line);
+                    $line = trim($line);
+                    if ($line === '' || ! str_contains($line, '|')) {
+                        continue;
+                    }
+                    [$evt, $path] = explode('|', $line, 2);
                     if ($path === '' || $this->shouldIgnore($path)) {
                         continue;
                     }
+
+                    // A lone OPEN never marks a folder dirty (it isn't a
+                    // change). For a 0-byte placeholder it's a hydrate request.
+                    if ($this->isOpenEvent($evt)) {
+                        if ($hydrate && $this->isZeroBytePlaceholder($path)
+                            && $this->folderIdForPath($path, $folders) !== null) {
+                            $opened[$path] = microtime(true);
+                        }
+
+                        continue;
+                    }
+
                     if ($id = $this->folderIdForPath($path, $folders)) {
                         $dirty[$id] = microtime(true);
                     }
@@ -173,6 +222,7 @@ class WatchFilesCommand extends Command
             }
 
             $now = microtime(true);
+
             foreach ($dirty as $id => $changedAt) {
                 if ($now - $changedAt < self::DEBOUNCE_SECONDS) {
                     continue;
@@ -183,6 +233,22 @@ class WatchFilesCommand extends Command
                 SyncChangesJob::dispatch($id);
                 $lastSync[$id] = $now;
                 unset($dirty[$id]);
+            }
+
+            // Flush the opened-placeholder buffer once it has gone quiet: a
+            // single file opened on its own → hydrate it; a burst (a folder /
+            // thumbnailer scan opening many at once) → ignore, so we never
+            // mass-download the whole drive just because a folder was browsed.
+            if ($opened !== [] && $now - max($opened) >= self::HYDRATE_WINDOW_SECONDS) {
+                $batch = array_keys($opened);
+                $opened = [];
+                if (count($batch) <= self::maxHydrateBatch()) {
+                    foreach ($batch as $abs) {
+                        $this->hydrate($abs, $folders);
+                    }
+                } else {
+                    $this->info('Skipped hydrate-on-open for '.count($batch).' files (folder scan, not a deliberate open).');
+                }
             }
 
             // Pick up folders that were just (un)synced elsewhere.
@@ -199,5 +265,58 @@ class WatchFilesCommand extends Command
         }
         proc_terminate($proc);
         proc_close($proc);
+    }
+
+    private static function maxHydrateBatch(): int
+    {
+        return max(1, (int) config('rnvsync.sync.hydrate_max_batch', 1));
+    }
+
+    /**
+     * Best-effort download of a single opened placeholder, with a desktop
+     * toast. Re-checks at flush time so it never clobbers a file the user
+     * just typed into, nor double-downloads one already in flight.
+     *
+     * @param  array<int,string>  $folders
+     */
+    private function hydrate(string $abs, array $folders): void
+    {
+        if (! $this->isZeroBytePlaceholder($abs) || PendingOps::has($abs)) {
+            return;
+        }
+
+        $id = $this->folderIdForPath($abs, $folders);
+        if ($id === null) {
+            return;
+        }
+
+        $folder = SyncFolder::with('account')->find($id);
+        if (! $folder || ! $folder->account) {
+            return;
+        }
+
+        $base = rtrim(app(SettingsRepository::class)->mountBase(), '/').'/'.$folder->account->name;
+        if (! str_starts_with($abs, $base.'/')) {
+            return;
+        }
+        $rel = ltrim(substr($abs, strlen($base)), '/');
+
+        PendingOps::mark($abs);
+        DownloadPathJob::dispatch($folder->account->id, $rel);
+        $this->notify(basename($abs));
+        $this->info("Hydrate-on-open: downloading {$rel}");
+    }
+
+    /** Best-effort desktop notification (no-op where notify-send is absent). */
+    private function notify(string $name): void
+    {
+        try {
+            Process::timeout(5)->run([
+                'notify-send', '-a', 'RNV Sync', '-i', 'folder-download',
+                'RNV Sync', "Baixando “{$name}”…",
+            ]);
+        } catch (\Throwable) {
+            // No desktop notifications here — ignore.
+        }
     }
 }

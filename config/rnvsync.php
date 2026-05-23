@@ -124,6 +124,16 @@ return [
         // interval mainly delays auto-discovery of files created on the
         // OneDrive website. Override with RNVSYNC_PLACEHOLDER_REFRESH_MINUTES.
         'placeholder_refresh_minutes' => (int) env('RNVSYNC_PLACEHOLDER_REFRESH_MINUTES', 120),
+
+        // Best-effort "hydrate on open" for the physical model: when a single
+        // ☁ placeholder is opened, download it in the background. Linux can't
+        // block the open to fetch content first (no Cloud Files API without
+        // FUSE), so the FIRST open still shows the file empty — it becomes real
+        // shortly after. Capped to ONE file per quiet window so a file-manager
+        // folder scan / thumbnailer (which opens many placeholders at once)
+        // never triggers a mass download. Disable with RNVSYNC_HYDRATE_ON_OPEN.
+        'hydrate_on_open' => (bool) env('RNVSYNC_HYDRATE_ON_OPEN', true),
+        'hydrate_max_batch' => max(1, (int) env('RNVSYNC_HYDRATE_MAX_BATCH', 1)),
     ],
 
     'defaults' => [

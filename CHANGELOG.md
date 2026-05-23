@@ -8,6 +8,15 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Added
 
+- **Hydrate on open** (physical model, best-effort). Opening a single cloud (☁)
+  file in the file manager now downloads it automatically in the background,
+  with a desktop notification. Linux can't block the open to fetch content
+  first (no Cloud Files API without FUSE), so the very first open still shows
+  the file empty — it becomes real moments later (reopen to see it). Crucially,
+  only a **lone** open triggers it: a folder/thumbnailer scan that opens many
+  placeholders at once is ignored, so browsing never mass-downloads the drive.
+  Toggle with `RNVSYNC_HYDRATE_ON_OPEN`. (For fully transparent hydrate-on-open,
+  use the FUSE mount storage mode.)
 - **Self-heal** (`rnvsync:heal`, scheduled every 3 minutes). A cheap, idempotent
   safety net that clears the leftover state which could otherwise pin the tray
   icon on "Syncing…": sync runs left `running` by a killed job, stale pending
