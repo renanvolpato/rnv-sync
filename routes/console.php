@@ -47,3 +47,14 @@ Schedule::command('rnvsync:adopt-local-folders')
 Schedule::command('rnvsync:discover-remote-folders')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+// Surface NEW cloud-side files (created on the OneDrive website) inside
+// existing folders as ☁ placeholders. This recursive remote listing is the
+// heavy part of on-demand sync (minutes on big folders), so it runs in its
+// OWN background process — OFF the single queue worker, so the change-sync
+// and user downloads stay snappy and the tray icon settles. Throttled per
+// folder by sync.placeholder_refresh_minutes.
+Schedule::command('rnvsync:refresh-placeholders')
+    ->hourly()
+    ->runInBackground()
+    ->withoutOverlapping();

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\SyncFolder;
-use App\Services\Files\LocalFiles;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneRunner;
 use Illuminate\Bus\Queueable;
@@ -15,7 +14,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * Lightweight two-way change sync for an on-demand folder. Designed to
@@ -26,6 +24,10 @@ use Illuminate\Support\Facades\Cache;
  *  • Pull: update ONLY the files the user keeps offline (real, size>0)
  *    via an explicit --files-from list — placeholders are never
  *    hydrated and online-only files are left alone.
+ *
+ * Surfacing NEW cloud-side files as ☁ placeholders (the heavy recursive
+ * remote listing) is handled OUT of band by rnvsync:refresh-placeholders,
+ * so this job stays fast and never monopolises the single queue worker.
  *
  * Low concurrency / tpslimit keep CPU, disk and API use small.
  */
@@ -98,7 +100,7 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
 
     public function __construct(public int $syncFolderId) {}
 
-    public function handle(RcloneRunner $rclone, RcloneConfigGenerator $config, LocalFiles $localFiles): void
+    public function handle(RcloneRunner $rclone, RcloneConfigGenerator $config): void
     {
         $folder = SyncFolder::with('account')->find($this->syncFolderId);
 
@@ -154,19 +156,10 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
 
         @unlink($listFile);
 
-        // 3) Surface NEW remote files (e.g. created on the OneDrive website)
-        // as 0-byte cloud placeholders so they appear in the file manager.
-        // This recursive lsjson over the whole remote is the EXPENSIVE step
-        // (tens of thousands of placeholders, minutes of OneDrive API time),
-        // so it is throttled to at most once per folder per
-        // placeholder_refresh_minutes — NOT on every change-sync. The
-        // watcher fires push/pull on each local edit (cheap), and a file
-        // created on the website appears within that window (or instantly on
-        // "Sync now"). Without this throttle the single worker spent all its
-        // time re-listing huge folders and the queue crawled.
-        if (Cache::add('rnv-materialized-'.$folder->id, 1, self::materializeEverySeconds())) {
-            $localFiles->materializeCloudPlaceholders($folder->account, $folder->remote_path);
-        }
+        // Surfacing NEW cloud-side files as ☁ placeholders is the heavy step
+        // (a recursive remote listing, minutes on big folders) and runs OUT
+        // of band in rnvsync:refresh-placeholders — off this single queue
+        // worker — so the change-sync stays fast and the sync icon settles.
 
         $folder->update([
             'last_synced_at' => Carbon::now(),
@@ -206,11 +199,5 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
         fclose($handle);
 
         return [$listFile, $count];
-    }
-
-    /** Throttle window for the heavy placeholder refresh, in seconds. */
-    private static function materializeEverySeconds(): int
-    {
-        return max(60, (int) config('rnvsync.sync.placeholder_refresh_minutes', 120) * 60);
     }
 }

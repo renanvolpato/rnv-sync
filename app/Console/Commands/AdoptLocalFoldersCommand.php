@@ -74,7 +74,7 @@ class AdoptLocalFoldersCommand extends Command
                 // upload. Either way it no longer waits behind a huge
                 // folder monopolising the single worker.
                 if ($this->isSmall($path)) {
-                    (new SyncChangesJob($folder->id))->handle($rclone, $config, $files);
+                    (new SyncChangesJob($folder->id))->handle($rclone, $config);
                 } else {
                     SyncChangesJob::dispatch($folder->id);
                 }

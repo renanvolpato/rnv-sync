@@ -3,7 +3,6 @@
 use App\Jobs\SyncChangesJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
-use App\Services\Files\LocalFiles;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneResult;
 use App\Services\Rclone\RcloneRunner;
@@ -40,22 +39,21 @@ it('pushes real files only (skips placeholders) and pulls just kept files', func
     $this->mock(RcloneConfigGenerator::class)->shouldReceive('regenerate');
 
     (new SyncChangesJob($this->folder->id))->handle(
-        app(RcloneRunner::class), app(RcloneConfigGenerator::class), app(LocalFiles::class)
+        app(RcloneRunner::class), app(RcloneConfigGenerator::class)
     );
 
-    // 1) push: copy local -> remote, --min-size 1b (skip 0-byte
-    //    placeholders only), --update (don't clobber newer cloud),
-    //    and the Vault/Trash excludes for the recursive scan.
+    // push: copy local -> remote, --min-size 1b (skip 0-byte placeholders),
+    // --update (don't clobber newer cloud), real-only (no --files-from).
     $push = $calls[0];
     expect($push[0])->toBe('copy')
         ->and($push[1])->toBe($this->folder->local_path)
         ->and($push)->toContain('--min-size')->toContain('1b')
         ->and($push)->toContain('--update')
-        ->and($push)->toContain('--exclude');
+        ->and($push)->toContain('--exclude')
+        ->and($push)->not->toContain('--files-from');
 
-    // 2) pull: copy remote -> local --files-from <list of real files>,
-    //    --update, and crucially NO --exclude (rclone rejects
-    //    --files-from combined with any other filter).
+    // pull: copy remote -> local --files-from <list of real files>, --update,
+    // and crucially NO --exclude (rclone rejects --files-from + filters).
     $pull = $calls[1];
     expect($pull[0])->toBe('copy')
         ->and($pull[2])->toBe($this->folder->local_path)
@@ -63,41 +61,25 @@ it('pushes real files only (skips placeholders) and pulls just kept files', func
         ->and($pull)->toContain('--update')
         ->and($pull)->not->toContain('--exclude');
 
-    expect($push)->not->toContain('--files-from'); // push is real-only
-
-    // 3) discovery: a recursive lsjson of the remote so files/subfolders
-    //    created on the website show up locally (as ☁ placeholders).
-    $discovery = collect($calls)->first(fn ($c) => ($c[0] ?? '') === 'lsjson');
-    expect($discovery)->not->toBeNull()
-        ->and($discovery)->toContain('-R')
-        ->and($discovery)->toContain('od1:Docs');
+    // The change-sync no longer does the heavy recursive listing — that moved
+    // to rnvsync:refresh-placeholders — so it only ever issues copies here.
+    expect(collect($calls)->every(fn ($c) => ($c[0] ?? '') === 'copy'))->toBeTrue();
 });
 
-it('skips push and pull for a fully-online folder but still refreshes placeholders', function () {
-    // Only 0-byte placeholders → nothing real to sync up or down. The
-    // transfer engine must be skipped entirely (no rclone enumeration of
-    // tens of thousands of placeholders), but cloud-side discovery still runs.
+it('does no transfer work for a fully-online folder (placeholders only)', function () {
+    // Only 0-byte placeholders → nothing real to push or pull, and the heavy
+    // listing lives elsewhere, so the job must not touch rclone at all.
     File::put($this->folder->local_path.'/a.txt', '');
     File::put($this->folder->local_path.'/b.txt', '');
 
-    $calls = [];
-    $this->mock(RcloneRunner::class)
-        ->shouldReceive('run')
-        ->andReturnUsing(function ($args) use (&$calls) {
-            $calls[] = $args;
-
-            return new RcloneResult(0, '[]', '');
-        });
+    $this->mock(RcloneRunner::class)->shouldNotReceive('run');
     $this->mock(RcloneConfigGenerator::class)->shouldReceive('regenerate');
 
     (new SyncChangesJob($this->folder->id))->handle(
-        app(RcloneRunner::class), app(RcloneConfigGenerator::class), app(LocalFiles::class)
+        app(RcloneRunner::class), app(RcloneConfigGenerator::class)
     );
 
-    // No copy (push/pull) at all — there is nothing real to move.
-    expect(collect($calls)->contains(fn ($c) => ($c[0] ?? '') === 'copy'))->toBeFalse()
-        // …but the recursive lsjson placeholder refresh still happens.
-        ->and(collect($calls)->contains(fn ($c) => ($c[0] ?? '') === 'lsjson'))->toBeTrue();
+    expect($this->folder->fresh()->last_sync_status)->toBe('success');
 });
 
 it('does nothing for a bisync folder', function () {
@@ -107,7 +89,7 @@ it('does nothing for a bisync folder', function () {
     $this->mock(RcloneConfigGenerator::class)->shouldNotReceive('regenerate');
 
     (new SyncChangesJob($this->folder->id))->handle(
-        app(RcloneRunner::class), app(RcloneConfigGenerator::class), app(LocalFiles::class)
+        app(RcloneRunner::class), app(RcloneConfigGenerator::class)
     );
 
     expect($this->folder->fresh()->sync_mode)->toBe('bisync');
