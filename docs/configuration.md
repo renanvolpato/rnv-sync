@@ -28,6 +28,8 @@ from an account's sync activity screen.
 | `RCLONE_CACHE_DIR` | `storage/rclone/cache` | VFS cache |
 | `RCLONE_MOUNT_BASE` | `~/RnvSync` | Where files appear |
 | `ONEDRIVE_CLIENT_ID` | rclone public id | Azure app id (override with your own) |
+| `RNVSYNC_PLACEHOLDER_REFRESH_MINUTES` | `120` | How often a folder re-lists the remote to surface new cloud files as ☁ (heavy on big drives) |
+| `DB_QUEUE_RETRY_AFTER` | `3900` | Queue visibility timeout (s); keep above the longest job timeout |
 | `REVERB_*` | see `.env.example` | WebSocket server |
 
 ## Defaults (`config/rnvsync.php`)
@@ -41,7 +43,11 @@ endpoints/scopes are defined here. Values map directly to SPEC §8 and
 The container/systemd runs `php artisan schedule:run` every minute,
 which drives:
 
-- `rnvsync:scheduled-sync` — every 15 min (configurable)
+- `rnvsync:scheduled-sync` — every 15 min (background sync safety net)
+- `rnvsync:discover-remote-folders` — every 5 min (mirror new cloud folders ☁)
+- `rnvsync:adopt-local-folders` — every 5 min (upload folders created locally)
 - `rnvsync:mount-supervisor` — every minute (mount health/restart)
 - cache LRU eviction — every 5 min
 - `rnvsync:capture-usage` — daily (storage trends)
+- `rnvsync:check-updates` — twice daily ("update available" badge)
+- `rnvsync:prune-orphan-folders` — daily (deactivate folders gone from the cloud)
