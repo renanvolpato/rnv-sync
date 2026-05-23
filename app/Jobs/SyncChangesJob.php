@@ -54,11 +54,6 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
     // is rare for folders that large.
     private const MAX_PULL_FILES = 3000;
 
-    // Re-list the remote to discover website-created files at most this
-    // often per folder (seconds). The push/pull on local edits still runs
-    // every sync; only the heavy recursive lsjson is throttled.
-    private const MATERIALIZE_EVERY = 1800;
-
     public function uniqueId(): string
     {
         return 'sync-changes-'.$this->syncFolderId;
@@ -116,37 +111,82 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
         $remote = $folder->account->remote_name.':'.ltrim($folder->remote_path, '/');
         $local = $folder->local_path;
 
+        // Build the real-file list ONCE, up front (low-memory streaming
+        // iterator — see buildRealFileList). Reused both to decide whether
+        // there is anything to sync and as the explicit pull set.
+        [$listFile, $realCount] = $this->buildRealFileList($local);
+
         $ok = true;
 
-        // 1) Push local creations/edits (real files only). NOTE the
-        // explicit "1b": rclone reads a unitless --min-size as KiB, so
-        // bare "1" silently skipped every file < 1 KiB. "1b" = 1 byte,
-        // so only our true 0-byte placeholders are excluded.
-        // --no-traverse: an on-demand folder is mostly 0-byte placeholders
-        // (e.g. PESSOAL = 1 real file among ~90k stubs). Only real files
-        // (--min-size 1b) are pushed, so checking each of those few against
-        // the remote individually is far cheaper than listing the whole
-        // ~90k-entry remote tree on every sync — which is what made the
-        // queue crawl.
-        $push = $rclone->run(
-            ['copy', $local, $remote, '--min-size', '1b', '--no-traverse', ...self::GENTLE, ...self::PUSH_EXCLUDES],
-            ['timeout' => 1700],
-        );
-        $ok = $ok && $push->successful();
+        // A fully-online folder (placeholders only, no real files) has
+        // nothing to push up or pull down. Skip the transfer engine instead
+        // of making rclone enumerate tens of thousands of 0-byte
+        // placeholders for nothing — that head-of-line work is what kept the
+        // single worker busy on big online-only folders (e.g. a 72k-file
+        // folder kept entirely in the cloud).
+        if ($realCount > 0) {
+            // 1) Push local creations/edits (real files only). NOTE the
+            // explicit "1b": rclone reads a unitless --min-size as KiB, so
+            // bare "1" silently skipped every file < 1 KiB. "1b" = 1 byte,
+            // so only our true 0-byte placeholders are excluded.
+            // --no-traverse: only the few real files are pushed, so checking
+            // each against the remote individually is far cheaper than
+            // listing the whole remote tree every sync.
+            $push = $rclone->run(
+                ['copy', $local, $remote, '--min-size', '1b', '--no-traverse', ...self::GENTLE, ...self::PUSH_EXCLUDES],
+                ['timeout' => 1700],
+            );
+            $ok = $ok && $push->successful();
 
-        // 2) Pull updates for kept-offline files only. Build the
-        // --files-from list with a low-memory iterator, streamed straight
-        // to disk: File::allFiles() (Symfony Finder) eagerly collects AND
-        // sorts every SplFileInfo, so on a huge folder (tens of thousands
-        // of files) it exhausted the worker's memory and the process was
-        // killed mid-job (exit 12) — it then retried forever and starved
-        // every other folder. RecursiveDirectoryIterator holds one entry
-        // at a time. --files-from must be used WITHOUT any --exclude
-        // (rclone rejects the combination outright), so GENTLE here
-        // carries no excludes.
+            // 2) Pull updates for kept-offline files only, via the explicit
+            // --files-from list. Placeholders are never hydrated and
+            // online-only files are left alone. --files-from must be used
+            // WITHOUT any --exclude (rclone rejects the combination), so
+            // GENTLE here carries no excludes.
+            if ($realCount <= self::MAX_PULL_FILES) {
+                $pull = $rclone->run(
+                    ['copy', $remote, $local, '--files-from', $listFile, ...self::GENTLE],
+                    ['timeout' => 1700],
+                );
+                $ok = $ok && $pull->successful();
+            }
+        }
+
+        @unlink($listFile);
+
+        // 3) Surface NEW remote files (e.g. created on the OneDrive website)
+        // as 0-byte cloud placeholders so they appear in the file manager.
+        // This recursive lsjson over the whole remote is the EXPENSIVE step
+        // (tens of thousands of placeholders, minutes of OneDrive API time),
+        // so it is throttled to at most once per folder per
+        // placeholder_refresh_minutes — NOT on every change-sync. The
+        // watcher fires push/pull on each local edit (cheap), and a file
+        // created on the website appears within that window (or instantly on
+        // "Sync now"). Without this throttle the single worker spent all its
+        // time re-listing huge folders and the queue crawled.
+        if (Cache::add('rnv-materialized-'.$folder->id, 1, self::materializeEverySeconds())) {
+            $localFiles->materializeCloudPlaceholders($folder->account, $folder->remote_path);
+        }
+
+        $folder->update([
+            'last_synced_at' => Carbon::now(),
+            'last_sync_status' => $ok ? 'success' : 'error',
+        ]);
+    }
+
+    /**
+     * Stream the folder's real (size > 0) files into a temp --files-from
+     * list with a low-memory iterator. NOT File::allFiles() (Symfony
+     * Finder), which eagerly collects AND sorts the whole tree and OOM'd
+     * the worker on huge folders. Returns [listFilePath, realFileCount].
+     *
+     * @return array{0:string,1:int}
+     */
+    private function buildRealFileList(string $local): array
+    {
         $listFile = tempnam(sys_get_temp_dir(), 'rnv-ff-');
         $handle = fopen($listFile, 'w');
-        $realCount = 0;
+        $count = 0;
 
         $tree = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator(
@@ -160,41 +200,17 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
         foreach ($tree as $f) {
             if ($f->isFile() && $f->getSize() > 0) {
                 fwrite($handle, ltrim(str_replace($local, '', $f->getPathname()), '/')."\n");
-                $realCount++;
+                $count++;
             }
         }
         fclose($handle);
 
-        if ($realCount > 0 && $realCount <= self::MAX_PULL_FILES) {
-            $pull = $rclone->run(
-                ['copy', $remote, $local, '--files-from', $listFile, ...self::GENTLE],
-                ['timeout' => 1700],
-            );
-            $ok = $ok && $pull->successful();
-        }
+        return [$listFile, $count];
+    }
 
-        @unlink($listFile);
-
-        // 3) Surface NEW remote files (e.g. created on the OneDrive
-        // website) as 0-byte cloud placeholders so they actually appear
-        // in the file manager. Placeholders are size 0, so the pull above
-        // never auto-downloads them: they stay online-only (☁) until the
-        // user opens or pins them, which is the on-demand contract.
-        //
-        // This is the EXPENSIVE step — a recursive lsjson over the whole
-        // remote (tens of thousands of placeholders). Run it at most once
-        // per folder per MATERIALIZE_EVERY, NOT on every change-sync: the
-        // watcher fires push/pull on each local edit (now cheap), and a
-        // file created on the *website* simply appears within that window.
-        // Without this throttle a single worker spent all its time
-        // re-listing 90k-entry folders and the queue crawled.
-        if (Cache::add('rnv-materialized-'.$folder->id, 1, self::MATERIALIZE_EVERY)) {
-            $localFiles->materializeCloudPlaceholders($folder->account, $folder->remote_path);
-        }
-
-        $folder->update([
-            'last_synced_at' => Carbon::now(),
-            'last_sync_status' => $ok ? 'success' : 'error',
-        ]);
+    /** Throttle window for the heavy placeholder refresh, in seconds. */
+    private static function materializeEverySeconds(): int
+    {
+        return max(60, (int) config('rnvsync.sync.placeholder_refresh_minutes', 120) * 60);
     }
 }

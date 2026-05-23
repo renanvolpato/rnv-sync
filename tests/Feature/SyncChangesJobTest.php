@@ -73,6 +73,33 @@ it('pushes real files only (skips placeholders) and pulls just kept files', func
         ->and($discovery)->toContain('od1:Docs');
 });
 
+it('skips push and pull for a fully-online folder but still refreshes placeholders', function () {
+    // Only 0-byte placeholders → nothing real to sync up or down. The
+    // transfer engine must be skipped entirely (no rclone enumeration of
+    // tens of thousands of placeholders), but cloud-side discovery still runs.
+    File::put($this->folder->local_path.'/a.txt', '');
+    File::put($this->folder->local_path.'/b.txt', '');
+
+    $calls = [];
+    $this->mock(RcloneRunner::class)
+        ->shouldReceive('run')
+        ->andReturnUsing(function ($args) use (&$calls) {
+            $calls[] = $args;
+
+            return new RcloneResult(0, '[]', '');
+        });
+    $this->mock(RcloneConfigGenerator::class)->shouldReceive('regenerate');
+
+    (new SyncChangesJob($this->folder->id))->handle(
+        app(RcloneRunner::class), app(RcloneConfigGenerator::class), app(LocalFiles::class)
+    );
+
+    // No copy (push/pull) at all — there is nothing real to move.
+    expect(collect($calls)->contains(fn ($c) => ($c[0] ?? '') === 'copy'))->toBeFalse()
+        // …but the recursive lsjson placeholder refresh still happens.
+        ->and(collect($calls)->contains(fn ($c) => ($c[0] ?? '') === 'lsjson'))->toBeTrue();
+});
+
 it('does nothing for a bisync folder', function () {
     $this->folder->update(['sync_mode' => 'bisync']);
 

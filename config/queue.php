@@ -40,7 +40,12 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            // Visibility timeout: must EXCEED the longest job timeout
+            // (downloads / keep-online run up to 3600s; sync up to 1800s).
+            // At the old 90s default a long-running sync/download became
+            // visible for retry while still executing — wasted re-runs and
+            // a corruption risk the moment a second worker is ever added.
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 3900),
             'after_commit' => false,
         ],
 

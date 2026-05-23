@@ -116,6 +116,14 @@ return [
         // Network-failure retry policy (SPEC §9 v0.2.0 EARS / §17).
         'max_retries' => 3,
         'backoff_seconds' => [5, 30, 300],
+        // How often an on-demand folder re-lists the whole remote tree to
+        // surface NEW cloud-side files as ☁ placeholders. This recursive
+        // listing is the heaviest part of sync (minutes for 50k+ files), so
+        // it is throttled. Local edits still upload in real time (the file
+        // watcher) and "Sync now" forces an immediate refresh, so a longer
+        // interval mainly delays auto-discovery of files created on the
+        // OneDrive website. Override with RNVSYNC_PLACEHOLDER_REFRESH_MINUTES.
+        'placeholder_refresh_minutes' => (int) env('RNVSYNC_PLACEHOLDER_REFRESH_MINUTES', 120),
     ],
 
     'defaults' => [
