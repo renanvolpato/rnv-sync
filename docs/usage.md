@@ -7,11 +7,16 @@
 3. **Sign in with Microsoft** → authorize. You return to the dashboard
    with the account connected. Tokens are stored encrypted locally.
 
-## Choose folders to sync
+## Your folders (online by default)
 
-1. Open the account → **Select folders**.
-2. Check the top-level folders to sync, **Save**. A first sync starts
-   automatically (bidirectional via `rclone bisync`).
+There is **no manual folder-selection step**. The moment an account is
+connected, **all of its folders are mirrored online** — they appear as
+cloud placeholders (☁) both in the **file manager** and in the app's
+**Files** view, without downloading anything. New folders created later
+on the OneDrive website show up automatically too.
+
+Open the account → **Open files** to browse them, then keep what you
+want on this device (see *Files-on-Demand* below).
 
 ## Sync now / pause
 

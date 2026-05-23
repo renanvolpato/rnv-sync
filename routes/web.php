@@ -6,7 +6,6 @@ use App\Http\Controllers\RequirementsController;
 use App\Http\Controllers\SyncStateController;
 use App\Livewire\Pages\Accounts\AddAccount;
 use App\Livewire\Pages\Accounts\FileBrowser;
-use App\Livewire\Pages\Accounts\FolderSelection;
 use App\Livewire\Pages\Accounts\SyncActivity;
 use App\Livewire\Pages\Auth\Login;
 use App\Livewire\Pages\ConflictsPage;
@@ -66,7 +65,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/accounts/new', AddAccount::class)->name('accounts.new');
     Route::get('/accounts/{account}/files', FileBrowser::class)->name('accounts.files');
-    Route::get('/accounts/{account}/folders', FolderSelection::class)->name('accounts.folders');
     Route::get('/accounts/{account}/activity', SyncActivity::class)->name('accounts.activity');
 
     // Zero-config (default) — rclone's own OAuth, no app registration.

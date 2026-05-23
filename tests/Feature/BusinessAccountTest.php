@@ -1,13 +1,16 @@
 <?php
 
+use App\Jobs\MirrorRemoteFoldersJob;
 use App\Models\Account;
 use App\Models\User;
 use App\Services\Graph\OneDriveOAuth;
 use App\Services\Rclone\RcloneConfigGenerator;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 
 it('detects drive id, drive type and tenant for a Business account (EARS F4.1)', function () {
     $this->actingAs(User::factory()->create());
+    Queue::fake();
 
     // Build an access token JWT carrying a tenant (tid) claim.
     $jwt = 'h.'.rtrim(strtr(base64_encode(json_encode(['tid' => 'tenant-xyz'])), '+/', '-_'), '=').'.s';
@@ -33,6 +36,8 @@ it('detects drive id, drive type and tenant for a Business account (EARS F4.1)',
         ->and($account->drive_id)->toBe('b!DRIVEID')
         ->and($account->drive_type)->toBe('business')
         ->and($account->tenant_id)->toBe('tenant-xyz');
+
+    Queue::assertPushed(MirrorRemoteFoldersJob::class, fn ($job) => $job->accountId === $account->id);
 });
 
 it('decodes the tenant from a token and null for a non-JWT', function () {

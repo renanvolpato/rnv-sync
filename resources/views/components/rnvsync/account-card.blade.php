@@ -54,9 +54,12 @@
     </p>
 
     <div class="flex flex-col gap-2">
-        <flux:button :href="route('accounts.folders', $account)" variant="primary" size="sm"
-            icon="folder-plus" class="w-full justify-center">
-            {{ __('sync.select_folders') }}
+        {{-- Online by default: all folders are mirrored as ☁ automatically on
+             connect, so the primary action is to browse them and keep what you
+             need on this device — not to pick folders. --}}
+        <flux:button :href="route('accounts.files', $account)" variant="primary" size="sm"
+            icon="folder-open" class="w-full justify-center">
+            {{ __('sync.open_files') }}
         </flux:button>
         <flux:button :href="route('accounts.activity', $account)" variant="ghost" size="sm"
             icon="arrow-path" class="w-full justify-center">

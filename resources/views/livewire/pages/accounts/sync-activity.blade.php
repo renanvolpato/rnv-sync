@@ -18,8 +18,11 @@
             <flux:subheading>{{ $account->name }} — {{ __('sync.activity_subtitle') }}</flux:subheading>
         </div>
         <div class="flex gap-2">
-            <flux:button :href="route('accounts.folders', $account)" variant="ghost" icon="folder-plus">
-                {{ __('sync.select_folders') }}
+            {{-- Online by default: folders mirror automatically on connect,
+                 so the action here is to browse them and keep what you need
+                 on this device — not to pick folders. --}}
+            <flux:button :href="route('accounts.files', $account)" variant="ghost" icon="folder-open">
+                {{ __('sync.open_files') }}
             </flux:button>
             <flux:button wire:click="togglePause" variant="{{ $paused ? 'primary' : 'ghost' }}"
                 icon="{{ $paused ? 'play' : 'pause' }}">

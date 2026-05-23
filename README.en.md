@@ -28,8 +28,10 @@ battle-tested engine; RNV Sync is the polished UX and lifecycle layer.
 ## How it works
 
 1. Connect your OneDrive account (Microsoft login inside the app).
-2. Pick **which folders** to sync — nothing is downloaded by
-   default; everything shows as cloud ☁ in the file manager.
+2. **All folders show up online automatically** — the moment the
+   account is linked, everything is mirrored as cloud ☁ in the file
+   manager and the web app, downloading nothing and with no folder
+   picking step.
 3. Per item: **Keep local** (real download, ✓) or **Online only**
    (upload & free space, back to ☁).
 4. Local edits upload on their own; cloud edits come down for the

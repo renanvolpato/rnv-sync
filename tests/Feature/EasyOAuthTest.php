@@ -1,10 +1,12 @@
 <?php
 
+use App\Jobs\MirrorRemoteFoldersJob;
 use App\Models\Account;
 use App\Models\User;
 use App\Services\Graph\RcloneAuthorize;
 use App\Services\Rclone\RcloneConfigGenerator;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Mockery;
 
 it('parses the rclone authorize URL from its output', function () {
@@ -63,6 +65,7 @@ it('still pins client_id for advanced (own-app) accounts', function () {
 
 it('completes easy onboarding from a token and flags bundled client', function () {
     $this->actingAs(User::factory()->create());
+    Queue::fake();
 
     Http::fake([
         'graph.microsoft.com/v1.0/me' => Http::response(['displayName' => 'Me', 'mail' => 'me@live.com']),
@@ -88,6 +91,9 @@ it('completes easy onboarding from a token and flags bundled client', function (
     expect($account)->not->toBeNull()
         ->and($account->uses_bundled_client)->toBeTrue()
         ->and($account->email)->toBe('me@live.com');
+
+    // Online by default: connecting mirrors the whole drive automatically.
+    Queue::assertPushed(MirrorRemoteFoldersJob::class, fn ($job) => $job->accountId === $account->id);
 });
 
 it('reports pending while rclone is still waiting', function () {

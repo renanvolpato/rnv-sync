@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Accounts;
 
 use App\Exceptions\OAuthException;
+use App\Jobs\MirrorRemoteFoldersJob;
 use App\Models\Account;
 use App\Services\Graph\OneDriveOAuth;
 use App\Services\Rclone\RcloneConfigGenerator;
@@ -70,6 +71,12 @@ class AccountsService
 
         $this->configGenerator->regenerate();
 
+        // Online by default: mirror the whole drive as ☁ placeholders so
+        // every folder shows up automatically (file manager + web file
+        // browser) with no manual "select folders" step. Heavy (recursive
+        // listing of the whole drive), so it runs in the background.
+        MirrorRemoteFoldersJob::dispatch($account->id);
+
         return $account;
     }
 
@@ -108,6 +115,12 @@ class AccountsService
         }
 
         $this->configGenerator->regenerate();
+
+        // Online by default: mirror the whole drive as ☁ placeholders so
+        // every folder shows up automatically (file manager + web file
+        // browser) with no manual "select folders" step. Heavy (recursive
+        // listing of the whole drive), so it runs in the background.
+        MirrorRemoteFoldersJob::dispatch($account->id);
 
         return $account;
     }

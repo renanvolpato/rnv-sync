@@ -1,19 +1,14 @@
 <?php
 
 return [
-    // Screen 1 — pick what to sync
-    'select_folders' => 'Select folders to sync',
-    'select_folders_hint' => 'Tick folders (or open them and pick subfolders). They appear as cloud files (☁) — nothing is downloaded until you choose “Always keep on this device”.',
-    'open_folder_hint' => 'Double-click to open this folder',
-    'tick_to_sync' => 'Tick to sync',
-    'save_selection' => 'Sync these folders',
-    'folders_saved' => 'Folders added. They show as cloud files — keep items offline as needed.',
+    // Primary action — browse files (everything already shows online)
+    'open_files' => 'Open files',
 
-    // Screen 2 — synced folders
+    // Synced folders
     'synced_title' => 'Synced folders',
     'activity_subtitle' => 'Folders you track. Files show as cloud (☁) until you keep them on this device.',
     'folders' => 'Synced folders',
-    'no_folders' => 'No folders selected yet. Use “Select folders to sync”.',
+    'no_folders' => 'Your cloud folders appear here automatically. If this is empty, they are still being indexed — give it a moment.',
     'history' => 'Sync history',
     'no_history' => 'No sync runs yet.',
     'clear_history' => 'Clear history',
@@ -24,11 +19,6 @@ return [
     'queued' => 'Sync queued.',
     'unsynced' => 'Folder removed from sync. Local files were kept.',
     'unsync_confirm' => 'Stop syncing this folder? Local files stay; future changes won’t sync.',
-    'uncheck_hint' => 'Uncheck a folder and save to stop syncing it (local files are kept).',
-    'selected' => 'Selected',
-    'selected_count' => 'folder(s) selected',
-    'open_subfolders' => 'Open',
-    'subfolder_hint' => 'Tip: open a folder to pick specific subfolders instead of the whole folder.',
     'active' => 'Syncing',
     'inactive' => 'Paused',
     'remove' => 'Stop syncing',

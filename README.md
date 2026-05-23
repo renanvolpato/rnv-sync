@@ -31,8 +31,9 @@ gerenciamento por cima.
 ## Como funciona (rápido)
 
 1. Você conecta sua conta OneDrive (login Microsoft dentro do app).
-2. Escolhe **quais pastas** sincronizar — nada é baixado por padrão;
-   tudo aparece como nuvem ☁ no gerenciador de arquivos.
+2. **Todas as pastas já aparecem online** — assim que vincula a conta,
+   tudo é espelhado como nuvem ☁ no gerenciador de arquivos e na versão
+   web, sem baixar nada e sem precisar escolher pastas.
 3. Clica num arquivo/pasta para **"Manter local"** (baixa de verdade,
    vira ✓) ou **"Apenas online"** (sobe e libera espaço, volta a ☁).
 4. Alterações locais sobem sozinhas; alterações na nuvem descem nos

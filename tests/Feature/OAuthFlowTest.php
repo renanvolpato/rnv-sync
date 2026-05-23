@@ -1,9 +1,11 @@
 <?php
 
+use App\Jobs\MirrorRemoteFoldersJob;
 use App\Models\Account;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     $this->actingAs(User::factory()->create());
@@ -18,6 +20,8 @@ it('redirects to Microsoft when starting the OAuth flow', function () {
 });
 
 it('stores the token encrypted and shows the account on success', function () {
+    Queue::fake();
+
     Http::fake([
         'login.microsoftonline.com/*' => Http::response([
             'access_token' => 'real-access-token',
@@ -49,6 +53,9 @@ it('stores the token encrypted and shows the account on success', function () {
     // Encrypted at rest: the raw column must not contain the plaintext token.
     $raw = DB::table('rnvsync_accounts')->where('id', $account->id)->value('oauth_token');
     expect($raw)->not->toContain('real-access-token');
+
+    // Online by default: connecting mirrors the whole drive automatically.
+    Queue::assertPushed(MirrorRemoteFoldersJob::class, fn ($job) => $job->accountId === $account->id);
 });
 
 it('shows a localized error and offers retry when the user denies consent', function () {
