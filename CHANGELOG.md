@@ -8,6 +8,14 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Added
 
+- **Delete propagation — groundwork, OFF by default** (`RNVSYNC_PROPAGATE_DELETES`,
+  experimental). Mirrors local deletions of files/subfolders to the OneDrive
+  recycle bin (recoverable) so they don't reappear, heavily guarded
+  (`PendingOps` incl. ancestors, still-gone debounce, a mass-disappearance cap).
+  Kept disabled until validated end-to-end: it is risky in this architecture
+  (internal churn could cause cloud deletions) and deleting a whole top-level
+  folder is not yet covered. Includes `App\Jobs\PropagateDeleteJob` and the
+  watcher detection, all inert while the flag is off.
 - **Hydrate on open** (physical model, best-effort). Opening a single cloud (☁)
   file in the file manager now downloads it automatically in the background,
   with a desktop notification. Linux can't block the open to fetch content
@@ -27,6 +35,10 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Changed
 
+- **"Keep online" on a folder now leaves ☁ placeholders** (it uploads the real
+  files, then truncates them in place to 0 bytes) instead of emptying the folder.
+  The folder stays visible with its files as cloud items — and the change can
+  never be mistaken for a deletion by the watcher.
 - **Online by default.** The moment a OneDrive account is connected, the
   **entire** drive is mirrored as cloud (☁) placeholders automatically — both
   in the file manager and in the web file browser — with **no manual "select

@@ -204,8 +204,13 @@ class LocalFiles
                     );
                 }
             }
-            File::deleteDirectory($local);
-            File::ensureDirectoryExists($local);
+            // Turn the real files into 0-byte ☁ placeholders IN PLACE — do NOT
+            // delete the tree. Deleting it would (a) drop the folder from the
+            // file manager and (b) look like a user deletion to the watcher,
+            // which (with delete-propagation on) would purge the copies we just
+            // uploaded. Truncating keeps every entry present, so the watcher
+            // sees them as still there and never propagates a deletion.
+            $this->placeholderizeTree($local);
 
             return;
         }
@@ -224,6 +229,34 @@ class LocalFiles
             File::delete($local);
             File::ensureDirectoryExists(dirname($local));
             File::put($local, ''); // cloud placeholder (0 bytes)
+        }
+    }
+
+    /**
+     * Truncate every real (size > 0) file under $absPath to 0 bytes, turning
+     * each into a ☁ placeholder while keeping the tree intact (no deletes).
+     * Used by "keep online" on a folder so its files stay visible as cloud
+     * items and the watcher never mistakes the change for a deletion.
+     */
+    private function placeholderizeTree(string $absPath): void
+    {
+        if (! is_dir($absPath)) {
+            return;
+        }
+
+        $it = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(
+                $absPath,
+                \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_FILEINFO,
+            ),
+            \RecursiveIteratorIterator::LEAVES_ONLY,
+            \RecursiveIteratorIterator::CATCH_GET_CHILD,
+        );
+
+        foreach ($it as $f) {
+            if ($f->isFile() && $f->getSize() > 0) {
+                @file_put_contents($f->getPathname(), '');
+            }
         }
     }
 

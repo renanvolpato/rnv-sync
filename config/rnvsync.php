@@ -134,6 +134,21 @@ return [
         // never triggers a mass download. Disable with RNVSYNC_HYDRATE_ON_OPEN.
         'hydrate_on_open' => (bool) env('RNVSYNC_HYDRATE_ON_OPEN', true),
         'hydrate_max_batch' => max(1, (int) env('RNVSYNC_HYDRATE_MAX_BATCH', 1)),
+
+        // EXPERIMENTAL, OFF by default. Propagate local deletions of FILES and
+        // SUBFOLDERS to OneDrive (to its RECYCLE BIN, recoverable ~30 days) so a
+        // deleted item does not reappear — like the real OneDrive. Heavily
+        // guarded: ignores our own ops (PendingOps, incl. ancestors) and temp
+        // files, only fires when the path is STILL gone after a debounce (so
+        // "keep online", which leaves placeholders, never deletes the cloud),
+        // and a sanity cap skips mass-disappearances (a churn bug, not a user
+        // action). Deleting a whole TOP-LEVEL folder is not yet covered (its own
+        // inotify watch vanishes with it). Kept off until validated end-to-end;
+        // enable with RNVSYNC_PROPAGATE_DELETES=true.
+        'propagate_deletes' => (bool) env('RNVSYNC_PROPAGATE_DELETES', false),
+        // If more than this many distinct deletions land in one window, treat it
+        // as suspect (bug/churn) and skip — never mass-purge.
+        'propagate_deletes_cap' => max(1, (int) env('RNVSYNC_PROPAGATE_DELETES_CAP', 50)),
     ],
 
     'defaults' => [

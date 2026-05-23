@@ -56,6 +56,37 @@ it('recognises a 0-byte placeholder vs a real file, dir or missing path', functi
     File::deleteDirectory($dir);
 });
 
+it('detects delete/move-away events and directory events', function () {
+    expect($this->cmd->isDeleteEvent('DELETE'))->toBeTrue()
+        ->and($this->cmd->isDeleteEvent('DELETE,ISDIR'))->toBeTrue()
+        ->and($this->cmd->isDeleteEvent('MOVED_FROM'))->toBeTrue()
+        ->and($this->cmd->isDeleteEvent('CREATE'))->toBeFalse()
+        ->and($this->cmd->isDeleteEvent('CLOSE_WRITE,CLOSE'))->toBeFalse()
+        ->and($this->cmd->isDeleteEvent('MOVED_TO'))->toBeFalse();
+
+    expect($this->cmd->isDirEvent('DELETE,ISDIR'))->toBeTrue()
+        ->and($this->cmd->isDirEvent('DELETE'))->toBeFalse();
+});
+
+it('collapses child paths under a deleted parent (one cloud delete covers all)', function () {
+    expect($this->cmd->collapseChildPaths([
+        '/a/Docs',
+        '/a/Docs/sub/file.txt',
+        '/a/Docs/other.txt',
+        '/a/Other',
+    ]))->toEqualCanonicalizing(['/a/Docs', '/a/Other']);
+});
+
+it('ignores a deletion whose ancestor is an in-flight op (keep-online of a folder)', function () {
+    PendingOps::mark('/x/OneDrive/Folder');
+
+    expect($this->cmd->shouldIgnore('/x/OneDrive/Folder/child.txt'))->toBeTrue()
+        ->and($this->cmd->shouldIgnore('/x/OneDrive/Folder/sub/deep.txt'))->toBeTrue()
+        ->and($this->cmd->shouldIgnore('/x/OneDrive/Other/file.txt'))->toBeFalse();
+
+    PendingOps::clear('/x/OneDrive/Folder');
+});
+
 it('only watches active on-demand folders that exist on disk', function () {
     $base = sys_get_temp_dir().'/rnv-watch-'.uniqid();
     File::ensureDirectoryExists($base.'/exists');

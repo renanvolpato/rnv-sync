@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Jobs\DownloadPathJob;
+use App\Jobs\PropagateDeleteJob;
 use App\Jobs\SyncChangesJob;
 use App\Models\SyncFolder;
 use App\Services\Files\PendingOps;
@@ -26,6 +27,12 @@ use Illuminate\Support\Facades\Process;
  * Only a lone open triggers it; a folder/thumbnailer scan that opens many
  * placeholders at once is ignored, so the whole drive is never downloaded.
  *
+ * It also propagates LOCAL deletions to OneDrive (to its recycle bin), so a
+ * deleted folder/file does not reappear from the cloud. Heavily guarded: it
+ * ignores our own ops and temp files, only fires when the path is STILL gone
+ * after a debounce (so "keep online", which recreates a placeholder instantly,
+ * never deletes the cloud), and a sanity cap skips mass-disappearances.
+ *
  * inotify is event-driven: this process is ~0% CPU until a file is touched.
  */
 class WatchFilesCommand extends Command
@@ -45,6 +52,11 @@ class WatchFilesCommand extends Command
 
     /** Quiet period after the last OPEN before deciding to hydrate. */
     private const HYDRATE_WINDOW_SECONDS = 2;
+
+    /** Quiet period after the last delete before propagating it to the cloud.
+     *  Long enough that a "keep online" (which deletes then instantly recreates
+     *  a placeholder) settles back to "present" and is never propagated. */
+    private const DELETE_WINDOW_SECONDS = 8;
 
     /** Paths we never react to (our own placeholders / vault / noise). */
     private const IGNORE_SUBSTRINGS = [
@@ -110,8 +122,21 @@ class WatchFilesCommand extends Command
             }
         }
 
-        // Our own download/keep-online in progress for this path.
-        return PendingOps::has(rtrim($path, '/'));
+        // Our own download/keep-online in progress for this path — OR for any
+        // ancestor folder of it. The latter is critical for delete-propagation:
+        // "keep online" of a whole FOLDER deletes its children locally, and we
+        // must NOT mistake those for user deletions and purge the cloud copies.
+        $p = rtrim($path, '/');
+        if (PendingOps::has($p)) {
+            return true;
+        }
+        while (($p = dirname($p)) !== '' && $p !== '/' && $p !== '.') {
+            if (PendingOps::has($p)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -148,10 +173,51 @@ class WatchFilesCommand extends Command
         return is_file($path) && @filesize($path) === 0;
     }
 
+    /** A removal at this location (deleted or moved away). */
+    public function isDeleteEvent(string $events): bool
+    {
+        return (bool) preg_match('/\bDELETE\b|\bMOVED_FROM\b/', $events);
+    }
+
+    /** inotify marks directory events with ISDIR. */
+    public function isDirEvent(string $events): bool
+    {
+        return str_contains($events, 'ISDIR');
+    }
+
+    /**
+     * Drop any path that has an ancestor also in the set: deleting (purging)
+     * the parent already covers its children, so we never emit a delete per
+     * child of a removed folder.
+     *
+     * @param  list<string>  $paths
+     * @return list<string>
+     */
+    public function collapseChildPaths(array $paths): array
+    {
+        sort($paths); // ancestors sort before their descendants
+        $kept = [];
+        foreach ($paths as $p) {
+            $covered = false;
+            foreach ($kept as $k) {
+                if (str_starts_with($p, rtrim($k, '/').'/')) {
+                    $covered = true;
+                    break;
+                }
+            }
+            if (! $covered) {
+                $kept[] = $p;
+            }
+        }
+
+        return $kept;
+    }
+
     /** @param array<int,string> $folders */
     private function watch(array $folders): void
     {
         $hydrate = (bool) config('rnvsync.sync.hydrate_on_open', true);
+        $propagate = (bool) config('rnvsync.sync.propagate_deletes', true);
 
         $events = ['-e', 'close_write', '-e', 'create',
             '-e', 'moved_to', '-e', 'moved_from', '-e', 'delete'];
@@ -184,6 +250,10 @@ class WatchFilesCommand extends Command
         $lastSync = [];
         /** @var array<string,float> $opened placeholder path => last-open epoch */
         $opened = [];
+        /** @var array<string,float> $deleted removed path => last-event epoch */
+        $deleted = [];
+        /** @var array<string,bool> $deletedDir removed path => was a directory */
+        $deletedDir = [];
         $lastRefresh = microtime(true);
 
         while (true) {
@@ -217,6 +287,12 @@ class WatchFilesCommand extends Command
 
                     if ($id = $this->folderIdForPath($path, $folders)) {
                         $dirty[$id] = microtime(true);
+
+                        // A removal here may need to be mirrored to the cloud.
+                        if ($propagate && $this->isDeleteEvent($evt)) {
+                            $deleted[$path] = microtime(true);
+                            $deletedDir[$path] = $this->isDirEvent($evt);
+                        }
                     }
                 }
             }
@@ -249,6 +325,15 @@ class WatchFilesCommand extends Command
                 } else {
                     $this->info('Skipped hydrate-on-open for '.count($batch).' files (folder scan, not a deliberate open).');
                 }
+            }
+
+            // Flush the deletion buffer once quiet: mirror to the cloud
+            // (recycle bin) only the paths STILL gone — so "keep online",
+            // which recreates a placeholder at once, is never propagated.
+            if ($deleted !== [] && $now - max($deleted) >= self::DELETE_WINDOW_SECONDS) {
+                $this->flushDeletions($deleted, $deletedDir, $folders);
+                $deleted = [];
+                $deletedDir = [];
             }
 
             // Pick up folders that were just (un)synced elsewhere.
@@ -305,6 +390,74 @@ class WatchFilesCommand extends Command
         DownloadPathJob::dispatch($folder->account->id, $rel);
         $this->notify(basename($abs));
         $this->info("Hydrate-on-open: downloading {$rel}");
+    }
+
+    /**
+     * Decide which buffered deletions to mirror to the cloud and queue them.
+     * Guards: the path must still be gone, not be one of our own ops, resolve
+     * to an active folder; children are collapsed under a deleted parent; and a
+     * mass-disappearance (over the cap) is skipped as a likely bug, never purged.
+     *
+     * @param  array<string,float>  $deleted  path => last-event epoch
+     * @param  array<string,bool>  $deletedDir  path => was a directory
+     * @param  array<int,string>  $folders
+     */
+    private function flushDeletions(array $deleted, array $deletedDir, array $folders): void
+    {
+        $gone = [];
+        foreach (array_keys($deleted) as $path) {
+            if (! file_exists($path)
+                && ! $this->shouldIgnore($path)
+                && $this->folderIdForPath($path, $folders) !== null) {
+                $gone[] = $path;
+            }
+        }
+        if ($gone === []) {
+            return;
+        }
+
+        $gone = $this->collapseChildPaths($gone);
+
+        $cap = max(1, (int) config('rnvsync.sync.propagate_deletes_cap', 50));
+        if (count($gone) > $cap) {
+            $this->warn('Skipped propagating '.count($gone).' deletions (over the safety cap — looks like a bug/scan, not a deliberate delete).');
+
+            return;
+        }
+
+        foreach ($gone as $path) {
+            $this->propagateDelete($path, $deletedDir[$path] ?? false, $folders);
+        }
+    }
+
+    /**
+     * Queue a cloud-side deletion (to the recycle bin) for one removed path.
+     *
+     * @param  array<int,string>  $folders
+     */
+    private function propagateDelete(string $abs, bool $isDir, array $folders): void
+    {
+        $id = $this->folderIdForPath($abs, $folders);
+        if ($id === null) {
+            return;
+        }
+
+        $folder = SyncFolder::with('account')->find($id);
+        if (! $folder || ! $folder->account) {
+            return;
+        }
+
+        $base = rtrim(app(SettingsRepository::class)->mountBase(), '/').'/'.$folder->account->name;
+        if (! str_starts_with($abs, $base.'/')) {
+            return;
+        }
+        $rel = ltrim(substr($abs, strlen($base)), '/');
+        if ($rel === '') {
+            return;
+        }
+
+        PropagateDeleteJob::dispatch($folder->account->id, $rel, $isDir);
+        $this->info("Propagating delete to OneDrive recycle bin: {$rel}");
     }
 
     /** Best-effort desktop notification (no-op where notify-send is absent). */
