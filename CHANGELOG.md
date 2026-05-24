@@ -77,6 +77,11 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Fixed
 
+- **Tray icon could stay stuck on the spinner after a sync finished** (the menu
+  read "Tudo sincronizado" but the icon still showed the circular arrow). The
+  static cloud icon was set from the 2s poll while the 120ms spinner animation
+  ran separately, and the race left some panels on a stale frame. The animation
+  loop now solely owns the icon and makes one clean spinner→cloud switch on idle.
 - **Orphan-prune no longer deletes local data.** `rnvsync:prune-orphan-folders`
   used to delete a folder's local placeholder shell when its remote listing
   returned "not found" — so a single transient/eventual-consistency miss could
