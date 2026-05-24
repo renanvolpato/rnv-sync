@@ -66,6 +66,52 @@ it('prune-orphan-folders NEVER deactivates on transient network errors', functio
     expect($folder->fresh()->is_active)->toBeTrue();
 });
 
+it('does not deactivate on a one-off "not found" that clears on re-check', function () {
+    $account = Account::factory()->create(['remote_name' => 'od']);
+    $folder = SyncFolder::factory()->create([
+        'account_id' => $account->id, 'is_active' => true, 'remote_path' => 'Flaky',
+    ]);
+
+    $calls = 0;
+    $this->mock(RcloneRunner::class)
+        ->shouldReceive('run')
+        ->andReturnUsing(function () use (&$calls) {
+            $calls++;
+
+            return $calls === 1
+                ? new RcloneResult(3, '', "ERROR : Flaky: directory not found\n") // one-off
+                : new RcloneResult(0, '[]', '');                                   // clears on re-check
+        });
+
+    $this->artisan('rnvsync:prune-orphan-folders')->assertSuccessful();
+
+    expect($folder->fresh()->is_active)->toBeTrue(); // re-verify saved a live folder
+});
+
+it('only deactivates — it never deletes the local placeholder shell', function () {
+    $base = sys_get_temp_dir().'/rnv-prune-'.uniqid();
+    File::ensureDirectoryExists($base);
+    File::put($base.'/cloud.txt', ''); // 0-byte placeholder, no real files
+
+    $account = Account::factory()->create(['remote_name' => 'od']);
+    $folder = SyncFolder::factory()->create([
+        'account_id' => $account->id, 'is_active' => true,
+        'remote_path' => 'Gone', 'local_path' => $base,
+    ]);
+
+    $this->mock(RcloneRunner::class)
+        ->shouldReceive('run')
+        ->andReturn(new RcloneResult(3, '', "ERROR : Gone: directory not found\n"));
+
+    $this->artisan('rnvsync:prune-orphan-folders')->assertSuccessful();
+
+    expect($folder->fresh()->is_active)->toBeFalse()      // deactivated
+        ->and(is_dir($base))->toBeTrue()                  // shell kept
+        ->and(is_file($base.'/cloud.txt'))->toBeTrue();   // placeholder kept (no data loss)
+
+    File::deleteDirectory($base);
+});
+
 it('account-card shows the saved quota even when the latest refresh failed', function () {
     $account = Account::factory()->create([
         'name' => 'OD',

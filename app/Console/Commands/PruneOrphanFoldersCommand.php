@@ -12,13 +12,15 @@ use Illuminate\Console\Command;
 
 /**
  * Deactivates active sync folders whose remote counterpart no longer
- * exists (renamed/deleted on the cloud). Without this, the DB keeps
- * piling up "11 selected" entries pointing at vanished paths and the
- * file manager keeps showing empty placeholder shells.
+ * exists (renamed/deleted on the cloud), so the DB stops tracking
+ * vanished paths.
  *
- * Conservative: only prunes on a DEFINITIVE "not found" reply from
- * rclone — a transient network/throttling failure never causes a
- * deactivation. Scheduled daily; can also be triggered manually.
+ * SAFETY: it ONLY deactivates (stops tracking) — it NEVER deletes the local
+ * files/placeholders. And it only acts on a DEFINITIVE "not found" confirmed
+ * by TWO checks (a one-off — eventual consistency after a move, a brief glitch,
+ * a transient error — must never stop syncing a live folder, since a
+ * deactivated folder isn't re-added automatically). Scheduled daily; can also
+ * be run manually.
  */
 class PruneOrphanFoldersCommand extends Command
 {
@@ -37,38 +39,59 @@ class PruneOrphanFoldersCommand extends Command
             }
 
             $remote = $f->account->remote_name.':'.ltrim($f->remote_path, '/');
+
+            if (! $this->confirmedGone($rclone, $remote)) {
+                continue;
+            }
+
+            // The remote is gone BUT there are real local files here — a
+            // locally-created folder waiting to upload (see
+            // AdoptLocalFoldersCommand), not an orphan. Never touch it.
+            if ($files->hasAnyRealFile($f->local_path)) {
+                continue;
+            }
+
+            // ONLY deactivate. Never delete the local placeholder shell: a
+            // wrong prune (or a folder you still want locally) must not lose
+            // data — the worst case here is "stops syncing", not "files gone".
+            $f->update(['is_active' => false]);
+            $this->info("Deactivated orphan: #{$f->id} {$f->remote_path}");
+            $pruned++;
+        }
+
+        $this->info("Done. {$pruned} folder(s) deactivated.");
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * True only if rclone gives a DEFINITIVE "not found" on TWO checks (a brief
+     * pause apart). A transient/auth/other error, or a one-off that clears on
+     * re-check, returns false so a live folder is never deactivated.
+     */
+    private function confirmedGone(RcloneRunner $rclone, string $remote): bool
+    {
+        foreach ([0, 1] as $attempt) {
             $r = $rclone->run(
                 ['lsjson', '--no-mimetype', '--max-depth', '1', $remote],
                 ['timeout' => 30],
             );
             if ($r->successful()) {
-                continue;
+                return false;
             }
 
             $err = strtolower($r->stderr);
-            $gone = str_contains($err, 'directory not found')
-                || str_contains($err, 'object not found')
-                || str_contains($err, "doesn't support listing");
-            if (! $gone) {
-                // Network / throttling / other transient — leave alone.
-                continue;
+            $definitelyGone = str_contains($err, 'directory not found')
+                || str_contains($err, 'object not found');
+            if (! $definitelyGone) {
+                return false; // transient / auth / other — never prune
             }
 
-            // The remote is gone BUT there are real local files here —
-            // this is a locally-created folder waiting to upload (see
-            // AdoptLocalFoldersCommand), not an orphan. Never prune it.
-            if ($files->hasAnyRealFile($f->local_path)) {
-                continue;
+            if ($attempt === 0 && ! app()->runningUnitTests()) {
+                sleep(2); // re-verify after a brief pause
             }
-
-            $f->update(['is_active' => false]);
-            $files->tryRemoveEmptyShell($f->local_path);
-            $this->info("Pruned: #{$f->id} {$f->remote_path}");
-            $pruned++;
         }
 
-        $this->info("Done. {$pruned} folder(s) pruned.");
-
-        return self::SUCCESS;
+        return true;
     }
 }

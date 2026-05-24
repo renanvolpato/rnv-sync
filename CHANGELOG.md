@@ -75,6 +75,15 @@ All notable changes to RNV Sync are documented here. The format is based on
   used to pin the tray icon on "Syncing N items" for hours (a 20-min listing
   blocking the single worker while new jobs piled up) now drains in seconds.
 
+### Fixed
+
+- **Orphan-prune no longer deletes local data.** `rnvsync:prune-orphan-folders`
+  used to delete a folder's local placeholder shell when its remote listing
+  returned "not found" — so a single transient/eventual-consistency miss could
+  wipe the local files of a folder that still exists on the cloud. It now only
+  **deactivates** (stops tracking, never deletes local files) and only after a
+  **second confirming check** (a one-off "not found" is ignored).
+
 ### Removed
 
 - The manual **folder-selection screen** (`/accounts/{id}/folders`) and its
