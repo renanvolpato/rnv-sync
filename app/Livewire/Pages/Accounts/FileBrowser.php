@@ -11,6 +11,7 @@ use App\Services\Cache\CacheService;
 use App\Services\Files\LocalFiles;
 use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
+use App\Services\Rclone\RcloneBinary;
 use App\Services\Settings\SettingsRepository;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -32,6 +33,8 @@ class FileBrowser extends Component
     public string $path = '';
 
     public bool $rcloneUnavailable = false;
+
+    public bool $listingFailed = false;
 
     public bool $physical = true;
 
@@ -121,14 +124,26 @@ class FileBrowser extends Component
         return $crumbs;
     }
 
-    public function render(AccountsService $accounts, CacheService $cache, LocalFiles $local)
+    public function render(AccountsService $accounts, CacheService $cache, LocalFiles $local, RcloneBinary $rclone)
     {
         $entries = [];
 
-        try {
-            $entries = $accounts->listRemote($this->account, $this->path);
-        } catch (\Throwable) {
-            $this->rcloneUnavailable = true;
+        // Recompute every render (this view polls every 5s): a banner must
+        // never latch. Only show "rclone unavailable" when the bundled binary
+        // is genuinely missing — NOT for a one-off listing error.
+        $this->rcloneUnavailable = ! $rclone->isAvailable();
+        $this->listingFailed = false;
+
+        if (! $this->rcloneUnavailable) {
+            try {
+                $entries = $accounts->listRemote($this->account, $this->path);
+            } catch (\Throwable $e) {
+                // Transient/auth/path error for THIS listing — rclone itself is
+                // fine. Surface a soft, accurate message (the poll retries) and
+                // log the real cause instead of blaming a missing engine.
+                $this->listingFailed = true;
+                report($e);
+            }
         }
 
         if ($this->physical && $entries !== []) {

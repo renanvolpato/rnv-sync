@@ -43,6 +43,12 @@
                 <p class="mt-3 font-medium">{{ __('errors.rclone_unavailable_title') }}</p>
                 <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{ __('errors.rclone_unavailable_body') }}</p>
             </div>
+        @elseif ($listingFailed)
+            <div class="p-10 text-center">
+                <flux:icon.arrow-path class="size-10 mx-auto text-zinc-400 animate-spin" />
+                <p class="mt-3 font-medium">{{ __('errors.listing_failed_title') }}</p>
+                <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{ __('errors.listing_failed_body') }}</p>
+            </div>
         @elseif (empty($entries))
             <div class="p-10 text-center">
                 <flux:icon.folder class="size-10 mx-auto text-zinc-400" />

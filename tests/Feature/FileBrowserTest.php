@@ -35,14 +35,46 @@ it('lists the remote tree via rclone lsjson (SPEC F1.5)', function () {
         ->assertSee('2.0 KB');
 });
 
-it('shows an unavailable state when rclone cannot be reached', function () {
-    $this->mock(RcloneRunner::class)
-        ->shouldReceive('run')
-        ->andThrow(new RcloneException('rclone binary not found'));
+it('shows "rclone unavailable" only when the bundled binary is genuinely missing', function () {
+    config(['rnvsync.rclone.binary_path' => '/no/such/rclone-binary']);
 
     Livewire::test(FileBrowser::class, ['account' => $this->account])
         ->assertSet('rcloneUnavailable', true)
         ->assertSee(__('errors.rclone_unavailable_title'));
+});
+
+it('shows a transient "could not load" state (NOT "rclone missing") when a listing throws but the binary exists', function () {
+    // The binary is present (real repo path); a single listing error must not
+    // be reported as a missing engine, and the flag must not latch.
+    $this->mock(RcloneRunner::class)
+        ->shouldReceive('run')
+        ->andThrow(new RcloneException('couldn\'t connect: i/o timeout'));
+
+    Livewire::test(FileBrowser::class, ['account' => $this->account])
+        ->assertSet('rcloneUnavailable', false)
+        ->assertSet('listingFailed', true)
+        ->assertSee(__('errors.listing_failed_title'))
+        ->assertDontSee(__('errors.rclone_unavailable_title'));
+});
+
+it('clears a previously-failed listing once rclone responds again (no latched banner)', function () {
+    // First render throws, second succeeds — the banner must reset on success.
+    $calls = 0;
+    $this->mock(RcloneRunner::class)
+        ->shouldReceive('run')
+        ->andReturnUsing(function () use (&$calls) {
+            $calls++;
+
+            return $calls === 1
+                ? throw new RcloneException('transient')
+                : new RcloneResult(0, json_encode([['Name' => 'Back', 'IsDir' => true, 'Size' => -1]]), '');
+        });
+
+    Livewire::test(FileBrowser::class, ['account' => $this->account])
+        ->assertSet('listingFailed', true)
+        ->call('$refresh')
+        ->assertSet('listingFailed', false)
+        ->assertSee('Back');
 });
 
 it('navigates into a subdirectory', function () {

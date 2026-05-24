@@ -77,6 +77,15 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Fixed
 
+- **File browser no longer shows a false, sticky "rclone is not available".**
+  Any single listing error (a transient timeout, an expired session, browsing a
+  folder that was just deleted) used to flip the catch-all `rcloneUnavailable`
+  flag, and since the view polls every 5s and the flag never reset, the
+  misleading "the bundled rclone engine could not be reached / install it" banner
+  latched until a full page reload — even with rclone perfectly installed. The
+  banner now appears **only when the bundled binary is genuinely missing**; a
+  per-listing error shows a soft, accurate "couldn't load this folder, retrying"
+  state (logged), and the flag is recomputed every render so it self-clears.
 - **Tray icon could stay stuck on the spinner after a sync finished** (the menu
   read "Tudo sincronizado" but the icon still showed the circular arrow). The
   static cloud icon was set from the 2s poll while the 120ms spinner animation

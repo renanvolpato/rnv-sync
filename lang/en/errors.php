@@ -8,4 +8,6 @@ return [
     'oauth_refresh_failed' => 'We could not refresh access to this account. Please reconnect it.',
     'rclone_unavailable_title' => 'rclone is not available',
     'rclone_unavailable_body' => 'The bundled rclone engine could not be reached. File listing is unavailable until it is installed.',
+    'listing_failed_title' => 'Could not load this folder',
+    'listing_failed_body' => 'A temporary error occurred while listing this folder (connection or session). Retrying automatically…',
 ];
