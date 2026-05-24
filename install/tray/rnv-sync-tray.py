@@ -88,6 +88,7 @@ class Tray:
 
         self._syncing = False
         self._frame = 0
+        self._idle_shown = False  # is the static cloud icon currently shown?
         self._sig = None  # last rendered menu signature (avoid flicker)
         self._rebuild_menu(False, [], 0, None)
 
@@ -146,8 +147,9 @@ class Tray:
             syncing, items, count, transfer = False, [], 0, None
 
         self._syncing = syncing
-        if not syncing:
-            self.ind.set_icon_full(APP_ICON, "RNV Sync — synced")
+        # The icon is owned by _animate so the spinner→cloud switch is one
+        # clean change: setting the static icon here every poll raced the
+        # 120ms animation and some panels left it stuck on a spinner frame.
 
         # Rebuild only when something visible changed — but include the
         # live progress (pct/dir) and done/total so the menu animates as
@@ -168,6 +170,13 @@ class Tray:
         if self._syncing:
             self._frame = (self._frame + 1) % len(FRAMES)
             self.ind.set_icon_full(FRAMES[self._frame], "RNV Sync — syncing")
+            self._idle_shown = False
+        elif not self._idle_shown:
+            # Just settled (or first idle): switch back to the cloud icon as a
+            # single clean change away from the last spinner frame.
+            self._frame = 0
+            self._idle_shown = True
+            self.ind.set_icon_full(APP_ICON, "RNV Sync — synced")
         return True  # keep the timer alive
 
 
