@@ -297,9 +297,10 @@ class LocalFiles
         $remote = $account->remote_name.':'.ltrim($path, '/');
         $bigKey = 'rnv-bigfolder-'.md5($remote);
 
-        // A folder we already learned is too big to list in one go: skip the
-        // doomed whole-subtree attempt and shard straight away.
-        if ($depth === 0 && Cache::has($bigKey)) {
+        // A subtree we already learned is too big to list in one go (at ANY
+        // depth): skip the doomed whole-subtree attempt and shard straight away,
+        // so we don't waste the full timeout on it on every refresh.
+        if (Cache::has($bigKey)) {
             return $this->shardAndRecurse($account, $path, $depth);
         }
 
@@ -319,9 +320,9 @@ class LocalFiles
 
                 return 0;
             }
-            if ($depth === 0) {
-                Cache::put($bigKey, 1, now()->addDays(7));
-            }
+            // Remember this subtree is too big (at any depth) so next time it is
+            // sharded immediately instead of wasting the full timeout again.
+            Cache::put($bigKey, 1, now()->addDays(7));
 
             return $this->shardAndRecurse($account, $path, $depth);
         }
