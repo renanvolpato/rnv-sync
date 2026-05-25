@@ -11,6 +11,7 @@ use App\Services\Cache\CacheService;
 use App\Services\Files\LocalFiles;
 use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
+use App\Services\Files\QueuedFileOps;
 use App\Services\Rclone\RcloneBinary;
 use App\Services\Settings\SettingsRepository;
 use Livewire\Attributes\Layout;
@@ -61,6 +62,7 @@ class FileBrowser extends Component
 
         if ($this->physical) {
             $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+            QueuedFileOps::cancelFreesUnder($this->account->id, $full); // overrides a queued "free"
             PathErrors::clear($local);
             PendingOps::mark($local); // show "syncing" now
             DownloadPathJob::dispatch($this->account->id, $full);
@@ -88,6 +90,7 @@ class FileBrowser extends Component
             // Upload-if-needed then drop local, in the background
             // (shows the syncing state; never loses a new local file).
             $local = app(LocalFiles::class)->localPathFor($this->account, $full);
+            QueuedFileOps::cancelDownloadsUnder($this->account->id, $full); // switching online drops queued downloads
             PathErrors::clear($local);
             PendingOps::mark($local);
             FreeOnlineJob::dispatch($this->account->id, $full);

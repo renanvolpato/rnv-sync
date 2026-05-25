@@ -68,15 +68,8 @@
                     <flux:button :href="route('trends')" variant="ghost" size="sm" icon="chart-bar">
                         {{ __('trends.title') }}
                     </flux:button>
-                    @php($rnvUpd = app(\App\Services\Update\UpdateService::class)->cachedStatus())
-                    @if ($rnvUpd && ($rnvUpd['available'] ?? false))
-                        <a href="{{ route('settings') }}"
-                           class="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
-                           title="{{ __('settings.update_available', ['n' => $rnvUpd['behind']]) }}">
-                            <flux:icon.arrow-down-tray class="size-3.5" />
-                            {{ __('settings.update_badge') }}
-                        </a>
-                    @endif
+                    <livewire:update-checker />
+
                     <flux:button :href="route('settings')" variant="ghost" size="sm" icon="cog-6-tooth">
                         {{ __('settings.title') }}
                     </flux:button>

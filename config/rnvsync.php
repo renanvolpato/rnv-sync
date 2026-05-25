@@ -135,6 +135,13 @@ return [
         'hydrate_on_open' => (bool) env('RNVSYNC_HYDRATE_ON_OPEN', true),
         'hydrate_max_batch' => max(1, (int) env('RNVSYNC_HYDRATE_MAX_BATCH', 1)),
 
+        // Disk guard for "keep local" downloads: skip a download when the target
+        // filesystem is at/above this percent full, so a big folder (or a queue
+        // of downloads) can't fill a small SSD. The skipped item shows an error
+        // and the user can free space or raise the limit. 0 or >=100 disables.
+        // Override with RNVSYNC_DOWNLOAD_MAX_DISK_PERCENT.
+        'download_max_disk_percent' => (int) env('RNVSYNC_DOWNLOAD_MAX_DISK_PERCENT', 95),
+
         // EXPERIMENTAL, OFF by default. Propagate local deletions of FILES and
         // SUBFOLDERS to OneDrive (to its RECYCLE BIN, recoverable ~30 days) so a
         // deleted item does not reappear — like the real OneDrive. Heavily

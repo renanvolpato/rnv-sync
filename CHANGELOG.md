@@ -8,6 +8,15 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Added
 
+- **Check-for-update button in the app header.** Updating no longer means digging
+  into Settings: the header has a one-click "Check for updates" control that shows
+  whether you're behind and lets you apply the update right there. The Settings
+  page keeps its full update panel; both use the same `UpdateService`.
+- **Disk-space guard for "keep local" downloads** (`RNVSYNC_DOWNLOAD_MAX_DISK_PERCENT`,
+  default 95). A download is skipped when the target filesystem is at/above the
+  threshold, so marking a big folder local (or a queue of downloads) can't fill a
+  small SSD. The skipped item is flagged with an error explaining how to free
+  space or raise the limit; set 0 or 100 to disable.
 - **Delete propagation — groundwork, OFF by default** (`RNVSYNC_PROPAGATE_DELETES`,
   experimental). Mirrors local deletions of files/subfolders to the OneDrive
   recycle bin (recoverable) so they don't reappear, heavily guarded
@@ -77,6 +86,14 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Fixed
 
+- **Switching a folder "online" now cancels the downloads queued for it** (and
+  vice-versa). The queue is a single FIFO worker, and `DownloadPathJob` didn't
+  re-check intent — so if you marked a folder "keep local" (queuing a big
+  recursive download) and then changed your mind to "online", the download kept
+  running and filling the disk because the "free" just waited behind it. Marking
+  a path online now drops the pending downloads under it (and marking it local
+  drops pending frees), so the switch takes effect immediately. A download
+  already mid-transfer can't be unqueued — the new disk guard bounds that case.
 - **Placeholder refresh no longer times out (and surfaces nothing) on huge
   folders.** The hourly "new cloud files → ☁ placeholders" step did one recursive
   remote listing per folder; on an 80k+ file OneDrive folder that single listing

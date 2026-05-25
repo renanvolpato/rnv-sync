@@ -10,4 +10,5 @@ return [
     'rclone_unavailable_body' => 'O motor rclone empacotado não pôde ser acessado. A listagem de arquivos fica indisponível até que ele seja instalado.',
     'listing_failed_title' => 'Não foi possível carregar esta pasta',
     'listing_failed_body' => 'Houve um erro temporário ao listar esta pasta (conexão ou sessão). Tentando novamente automaticamente…',
+    'disk_full_skip' => 'Download ignorado: o disco está quase cheio. Libere espaço (marque pastas como online) ou aumente o limite em configurações.',
 ];

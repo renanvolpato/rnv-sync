@@ -9,6 +9,7 @@ use App\Jobs\FreeOnlineJob;
 use App\Models\Account;
 use App\Services\Files\LocalFiles;
 use App\Services\Files\PendingOps;
+use App\Services\Files\QueuedFileOps;
 use App\Services\Settings\SettingsRepository;
 use Illuminate\Console\Command;
 
@@ -37,9 +38,11 @@ class FsActionCommand extends Command
                 $rel = ltrim(substr($abs, strlen($base)), '/');
 
                 if ($action === 'download') {
+                    QueuedFileOps::cancelFreesUnder($account->id, $rel); // a fresh "keep local" overrides a queued "free"
                     PendingOps::mark($abs); // show "syncing"
                     DownloadPathJob::dispatch($account->id, $rel);
                 } elseif ($action === 'free') {
+                    QueuedFileOps::cancelDownloadsUnder($account->id, $rel); // switching online drops queued downloads (don't fill the disk)
                     PendingOps::mark($abs); // upload-if-needed then drop
                     FreeOnlineJob::dispatch($account->id, $rel);
                 } else {

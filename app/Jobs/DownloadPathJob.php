@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\Account;
+use App\Services\Files\DiskGuard;
 use App\Services\Files\LocalFiles;
 use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
@@ -14,6 +15,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Physical mode: download a remote file/folder to disk in the
@@ -48,6 +50,17 @@ class DownloadPathJob implements ShouldBeUnique, ShouldQueue
         }
 
         $local = $files->localPathFor($account, $this->path);
+
+        // Disk guard: never let "keep local" fill the disk. If the target
+        // filesystem is past the fill threshold, skip and surface an error
+        // instead of downloading — the user frees space or raises the limit.
+        if (! DiskGuard::hasRoom($local)) {
+            PendingOps::clear($local);
+            PathErrors::mark($local, __('errors.disk_full_skip'));
+            Log::warning("download skipped — disk past fill threshold: {$this->path}");
+
+            return;
+        }
 
         // On exception we DON'T clear pending here: the ⟳ state must
         // persist across retries. Only success clears it.
