@@ -8,6 +8,7 @@ use App\Models\SyncFolder;
 use App\Services\Files\LocalFiles;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Surfaces NEW cloud-side files (created on the OneDrive website) inside
@@ -55,10 +56,17 @@ class RefreshPlaceholdersCommand extends Command
             if (! $force && Cache::has($key)) {
                 continue;
             }
-            Cache::put($key, 1, $ttl);
 
-            $files->materializeCloudPlaceholders($folder->account, $folder->remote_path);
-            $refreshed++;
+            try {
+                $files->materializeCloudPlaceholders($folder->account, $folder->remote_path);
+                Cache::put($key, 1, $ttl);          // throttle only after success
+                $refreshed++;
+            } catch (\Throwable $e) {
+                // One folder failing (e.g. a giant listing) must never abort the
+                // whole run or spam ERROR. Skip it, back off ~30 min, keep going.
+                Cache::put($key, 1, min($ttl, 1800));
+                Log::warning("refresh-placeholders: skipped #{$folder->id} {$folder->remote_path}: ".$e->getMessage());
+            }
         }
 
         $this->info("Refreshed placeholders for {$refreshed} folder(s).");

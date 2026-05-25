@@ -10,6 +10,7 @@ use App\Services\Rclone\RcloneRunner;
 use App\Services\Settings\SettingsRepository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Physical storage model (no FUSE): real files live on disk under
@@ -260,6 +261,18 @@ class LocalFiles
         }
     }
 
+    /** Per-subtree recursive-listing timeout (s). A subtree that can't be
+     *  enumerated within this is SHARDED into its children rather than failing
+     *  the whole folder (huge folders used to time out and surface nothing). */
+    private const MATERIALIZE_TIMEOUT = 600;
+
+    /** Shallow (one-level) listing timeout — cheap even on a huge folder. */
+    private const SHARD_LIST_TIMEOUT = 300;
+
+    /** How deep we keep splitting a too-large subtree before giving up. The
+     *  rest still surfaces lazily when the user browses into it. */
+    private const MAX_SHARD_DEPTH = 3;
+
     /**
      * Mirror a remote folder as a local tree of placeholders so cloud
      * items are visible in the file manager (☁). Existing real files
@@ -269,25 +282,117 @@ class LocalFiles
     {
         $this->configGenerator->regenerate();
 
+        return $this->materializeSubtree($account, $path, 0);
+    }
+
+    /**
+     * List a remote subtree recursively and create 0-byte placeholders. If the
+     * one-shot recursive listing is too slow (a giant folder like an 80k-file
+     * OneDrive), it SHARDS: list only the immediate children and recurse into
+     * each subdir, so only the heavy branch is split and the rest still
+     * completes — instead of the whole folder timing out and surfacing nothing.
+     */
+    private function materializeSubtree(Account $account, string $path, int $depth): int
+    {
         $remote = $account->remote_name.':'.ltrim($path, '/');
-        // Big OneDrives can take minutes to enumerate recursively; this
-        // runs in the queue (job timeout 1800s), so don't cap at 120s.
-        // Skip the Personal Vault/Trash: rclone can't traverse the
-        // Vault and would abort the whole listing (→ 0 placeholders).
-        $result = $this->rclone->run([
-            'lsjson', '-R', '--fast-list', '--files-only=false', $remote,
-            '--ignore-errors',
-            '--exclude', 'Cofre Pessoal/**', '--exclude', 'Personal Vault/**',
-            '--exclude', '.Trash-1000/**',
-        ], ['timeout' => 1700]);
+        $bigKey = 'rnv-bigfolder-'.md5($remote);
+
+        // A folder we already learned is too big to list in one go: skip the
+        // doomed whole-subtree attempt and shard straight away.
+        if ($depth === 0 && Cache::has($bigKey)) {
+            return $this->shardAndRecurse($account, $path, $depth);
+        }
+
+        try {
+            // Skip the Personal Vault/Trash: rclone can't traverse the Vault
+            // and would abort the whole listing (→ 0 placeholders).
+            $result = $this->rclone->run([
+                'lsjson', '-R', '--fast-list', '--files-only=false', $remote,
+                '--ignore-errors',
+                '--exclude', 'Cofre Pessoal/**', '--exclude', 'Personal Vault/**',
+                '--exclude', '.Trash-1000/**',
+            ], ['timeout' => self::MATERIALIZE_TIMEOUT]);
+        } catch (\Throwable $e) {
+            // Enumerating this subtree took longer than the timeout. Split it.
+            if ($depth >= self::MAX_SHARD_DEPTH) {
+                Log::warning("materialize: giving up on oversized subtree {$remote} (depth {$depth})");
+
+                return 0;
+            }
+            if ($depth === 0) {
+                Cache::put($bigKey, 1, now()->addDays(7));
+            }
+
+            return $this->shardAndRecurse($account, $path, $depth);
+        }
 
         if (! $result->successful()) {
             return 0;
         }
 
+        return $this->createPlaceholdersFrom($account, $path, $result->json() ?? []);
+    }
+
+    /**
+     * List only the IMMEDIATE children of $path (cheap even on a huge folder)
+     * and recurse into each subdir, splitting the heavy work across many small
+     * listings instead of one that times out.
+     */
+    private function shardAndRecurse(Account $account, string $path, int $depth): int
+    {
+        $remote = $account->remote_name.':'.ltrim($path, '/');
+
+        $top = $this->rclone->run([
+            'lsjson', '--files-only=false', $remote,
+            '--exclude', 'Cofre Pessoal/**', '--exclude', 'Personal Vault/**',
+            '--exclude', '.Trash-1000/**',
+        ], ['timeout' => self::SHARD_LIST_TIMEOUT]);
+
+        if (! $top->successful()) {
+            return 0;
+        }
+
         $created = 0;
-        foreach ($result->json() ?? [] as $entry) {
-            $rel = trim(($path ? $path.'/' : '').($entry['Path'] ?? ''), '/');
+        foreach ($top->json() ?? [] as $entry) {
+            $name = $entry['Path'] ?? $entry['Name'] ?? '';
+            if ($name === '') {
+                continue;
+            }
+            $childRel = trim(($path !== '' ? $path.'/' : '').$name, '/');
+            $local = $this->localPathFor($account, $childRel);
+
+            if (($entry['IsDir'] ?? false) === true) {
+                File::ensureDirectoryExists($local);
+                try {
+                    $created += $this->materializeSubtree($account, $childRel, $depth + 1);
+                } catch (\Throwable $e) {
+                    Log::warning("materialize: skipped subtree {$childRel}: ".$e->getMessage());
+                }
+
+                continue;
+            }
+
+            if (! file_exists($local)) {
+                File::ensureDirectoryExists(dirname($local));
+                File::put($local, ''); // 0-byte → cloud emblem
+                $created++;
+            }
+        }
+
+        return $created;
+    }
+
+    /**
+     * Create dirs + 0-byte placeholders from a recursive listing whose entry
+     * Paths are relative to $path.
+     *
+     * @param  array<int, array<string, mixed>>  $entries
+     */
+    private function createPlaceholdersFrom(Account $account, string $path, array $entries): int
+    {
+        $created = 0;
+        foreach ($entries as $entry) {
+            $rel = trim(($path !== '' ? $path.'/' : '').($entry['Path'] ?? ''), '/');
             $local = $this->localPathFor($account, $rel);
 
             if (($entry['IsDir'] ?? false) === true) {

@@ -77,6 +77,18 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Fixed
 
+- **Placeholder refresh no longer times out (and surfaces nothing) on huge
+  folders.** The hourly "new cloud files → ☁ placeholders" step did one recursive
+  remote listing per folder; on an 80k+ file OneDrive folder that single listing
+  blew past the timeout (~28 min) and **created zero placeholders**, so files
+  added on the OneDrive website never appeared locally in the background (they
+  only showed when you browsed into the subfolder). The listing now **shards
+  adaptively**: it tries the whole subtree, and if that is too slow it lists only
+  the immediate children and recurses into each subdir (up to 3 levels), so only
+  a genuinely huge branch is split and the rest still completes. A folder learned
+  to be oversized is sharded from the start next time (cached 7 days). The hourly
+  command is also resilient now — one folder failing no longer aborts the whole
+  run or spams the error log; it backs off and the other folders still refresh.
 - **File browser no longer shows a false, sticky "rclone is not available".**
   Any single listing error (a transient timeout, an expired session, browsing a
   folder that was just deleted) used to flip the catch-all `rcloneUnavailable`
