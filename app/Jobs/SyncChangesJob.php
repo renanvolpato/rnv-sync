@@ -153,12 +153,23 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
             // online-only files are left alone. --files-from must be used
             // WITHOUT any --exclude (rclone rejects the combination), so
             // GENTLE here carries no excludes.
+            //
+            // DATA-SAFETY: rclone --update copies remote→local when the cloud
+            // mtime is newer than the local mtime — regardless of SIZE. So a
+            // corrupted 0-byte cloud entry with a newer mtime would TRUNCATE
+            // the real local file. We drop those from the pull list first.
             if ($realCount <= self::MAX_PULL_FILES) {
-                $pull = $rclone->run(
-                    ['copy', $remote, $local, '--files-from', $listFile, ...self::GENTLE],
-                    ['timeout' => 1700],
-                );
-                $ok = $ok && $pull->successful();
+                $safeList = $this->filterPullListAgainstCloud($rclone, $listFile, $remote);
+                if ($safeList !== null) {
+                    $pull = $rclone->run(
+                        ['copy', $remote, $local, '--files-from', $safeList, ...self::GENTLE],
+                        ['timeout' => 1700],
+                    );
+                    $ok = $ok && $pull->successful();
+                    if ($safeList !== $listFile) {
+                        @unlink($safeList);
+                    }
+                }
             }
         }
 
@@ -207,5 +218,61 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
         fclose($handle);
 
         return [$listFile, $count];
+    }
+
+    /**
+     * Return a copy of $listFile with every path whose REMOTE counterpart is
+     * 0 bytes removed — so the pull's `rclone copy --update` can never replace
+     * a real local file with a corrupted 0-byte cloud entry (a real bug we hit:
+     * an older bad upload + newer cloud mtime caused pull to truncate restored
+     * real files). On error fetching cloud sizes we return null (skip the pull
+     * entirely rather than risk corruption). Returns $listFile unchanged when
+     * nothing needs filtering.
+     */
+    private function filterPullListAgainstCloud(RcloneRunner $rclone, string $listFile, string $remote): ?string
+    {
+        $result = $rclone->run(
+            ['lsjson', $remote, '--files-from', $listFile, '--no-mimetype', '--no-modtime'],
+            ['timeout' => 300],
+        );
+        if (! $result->successful()) {
+            return null;
+        }
+
+        $bad = [];
+        foreach (json_decode($result->stdout, true) ?: [] as $entry) {
+            if (($entry['Size'] ?? -1) === 0 && isset($entry['Path'])) {
+                $bad[$entry['Path']] = true;
+            }
+        }
+        if ($bad === []) {
+            return $listFile;
+        }
+
+        $filtered = tempnam(sys_get_temp_dir(), 'rnv-pull-safe-');
+        $in = @fopen($listFile, 'r');
+        $out = @fopen($filtered, 'w');
+        if (! $in || ! $out) {
+            if (is_resource($in)) {
+                fclose($in);
+            }
+            if (is_resource($out)) {
+                fclose($out);
+            }
+            @unlink($filtered);
+
+            return null;
+        }
+        while (($line = fgets($in)) !== false) {
+            $path = trim($line);
+            if ($path === '' || isset($bad[$path])) {
+                continue;
+            }
+            fwrite($out, $path."\n");
+        }
+        fclose($in);
+        fclose($out);
+
+        return $filtered;
     }
 }

@@ -5,6 +5,9 @@ use App\Jobs\StartSyncJob;
 use App\Jobs\SyncChangesJob;
 use App\Models\Account;
 use App\Models\SyncFolder;
+use App\Services\Rclone\RcloneConfigGenerator;
+use App\Services\Rclone\RcloneResult;
+use App\Services\Rclone\RcloneRunner;
 use App\Services\Sync\SyncService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
@@ -43,6 +46,53 @@ it('scheduled command queues a job per active folder, skips when paused', functi
     app(SyncService::class)->setPaused(true);
     $this->artisan('rnvsync:scheduled-sync')->assertSuccessful();
     Queue::assertPushed(StartSyncJob::class, 1); // still 1 — paused skipped
+});
+
+it('pull NEVER replaces a real local file with a 0-byte cloud entry (data-safety)', function () {
+    // Regression: rclone --update copies remote→local on newer cloud mtime
+    // regardless of SIZE. A corrupted 0-byte cloud upload with a newer mtime
+    // would TRUNCATE the user's real local file. Pre-filter the pull list to
+    // skip those entries before --files-from sees them.
+    $base = sys_get_temp_dir().'/rnv-pull-safe-'.uniqid();
+    File::ensureDirectoryExists($base.'/Folder');
+    File::put($base.'/Folder/real.txt', 'real content');
+
+    $account = Account::factory()->create(['remote_name' => 'od']);
+    $folder = SyncFolder::factory()->create([
+        'account_id' => $account->id, 'is_active' => true,
+        'sync_mode' => 'on_demand', 'local_path' => $base.'/Folder',
+        'remote_path' => 'Folder',
+    ]);
+
+    $pullList = null;
+    $this->mock(RcloneRunner::class)->shouldReceive('run')
+        ->andReturnUsing(function (array $args) use (&$pullList) {
+            // Cloud reports the file as 0 bytes (the broken state).
+            if (($args[0] ?? '') === 'lsjson') {
+                return new RcloneResult(0, json_encode([
+                    ['Path' => 'real.txt', 'Size' => 0],
+                ]), '');
+            }
+            // 'copy' + source contains ':' → this is the pull (remote→local).
+            if (($args[0] ?? '') === 'copy' && str_contains((string) ($args[1] ?? ''), ':')) {
+                $idx = array_search('--files-from', $args, true);
+                if ($idx !== false && isset($args[$idx + 1]) && is_file($args[$idx + 1])) {
+                    $pullList = trim((string) @file_get_contents($args[$idx + 1]));
+                }
+            }
+
+            return new RcloneResult(0, '', '');
+        });
+
+    (new SyncChangesJob($folder->id))->handle(
+        app(RcloneRunner::class),
+        app(RcloneConfigGenerator::class),
+    );
+
+    expect($pullList ?? '')->not->toContain('real.txt')      // pull skipped the broken entry
+        ->and(File::get($base.'/Folder/real.txt'))->toBe('real content'); // local untouched
+
+    File::deleteDirectory($base);
 });
 
 it('queues a change-sync for every active on-demand folder (so cloud additions are discovered)', function () {
