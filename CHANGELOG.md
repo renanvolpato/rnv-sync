@@ -86,6 +86,14 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Fixed
 
+- **File-manager emblem install is now self-diagnosing (helps Pop!_OS).** The
+  Nautilus extension installer prints whether the ☁/✓ emblems actually resolve in
+  your icon theme, detects the COSMIC desktop (whose file manager isn't Nautilus
+  and can't show extension emblems) and says so, and tells you to log out/in once
+  if the icon cache is stale. The updater no longer runs this step silently — its
+  result (and any failure hint) is shown — so a missing-emblems setup is no longer
+  invisible. (Emblems were verified working on GNOME/Nautilus; this surfaces why
+  they don't appear on a given desktop.)
 - **Switching a folder "online" now cancels the downloads queued for it** (and
   vice-versa). The queue is a single FIFO worker, and `DownloadPathJob` didn't
   re-check intent — so if you marked a folder "keep local" (queuing a big

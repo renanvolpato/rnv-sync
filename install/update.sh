@@ -44,10 +44,13 @@ php artisan route:clear  >/dev/null 2>&1 || true
 php artisan view:clear   >/dev/null 2>&1 || true
 
 # Reaplica integrações (extensão do gerenciador, bandeja) caso tenham
-# mudado nesta versão. Best-effort: nunca aborta o update.
+# mudado nesta versão. Best-effort: nunca aborta o update. A saída da
+# extensão do Nautilus é mostrada (inclui o autodiagnóstico de emblemas),
+# pois é o ponto que mais falha silenciosamente (ex.: Pop!_OS / COSMIC).
 say "Atualizando integrações de desktop"
-bash install/nautilus/install.sh >/dev/null 2>&1 || true
-bash install/tray/install.sh     >/dev/null 2>&1 || true
+bash install/nautilus/install.sh 2>/dev/null \
+  || say "(extensão do gerenciador falhou — rode 'bash install/nautilus/install.sh' num terminal p/ ver o motivo)"
+bash install/tray/install.sh >/dev/null 2>&1 || true
 
 say "Reiniciando os serviços em segundo plano"
 systemctl --user daemon-reload 2>/dev/null || true

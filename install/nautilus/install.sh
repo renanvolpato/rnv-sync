@@ -34,6 +34,35 @@ php artisan rnvsync:nautilus-config
 # Reload Nautilus so the extension + icons are picked up.
 nautilus -q 2>/dev/null || true
 
+# --- self-check: tell the user whether emblems will actually work here ---
+# (Pop!_OS is the usual trouble spot: COSMIC Files isn't Nautilus, and a
+#  stale icon cache can hide custom emblems until the next login.)
+emblems_resolve() {
+  python3 - <<'PY' 2>/dev/null
+import sys
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+it = Gtk.IconTheme.get_default()
+names = ("emblem-rnvsync-cloud", "emblem-rnvsync-synced", "emblem-rnvsync-syncing")
+sys.exit(0 if all(it.has_icon(n) for n in names) else 1)
+PY
+}
+
+desktop="${XDG_CURRENT_DESKTOP:-}:${XDG_SESSION_DESKTOP:-}:${DESKTOP_SESSION:-}"
+if printf '%s' "$desktop" | grep -qi cosmic; then
+  echo "⚠  COSMIC desktop detected. The ☁/✓ emblems need GNOME Files (Nautilus);"
+  echo "   the COSMIC file manager can't show extension emblems. Open your RNV Sync"
+  echo "   folder in Nautilus (install it if needed) to see them."
+elif emblems_resolve; then
+  echo "✓  Emblem icons resolve in your icon theme."
+else
+  echo "⚠  Your icon theme can't resolve the RNV Sync emblems yet. Log out and back"
+  echo "   in once (refreshes the icon cache) — that fixes it on most setups,"
+  echo "   including Pop!_OS. If they still don't appear, your theme may not inherit"
+  echo "   hicolor emblems."
+fi
+
 echo "Installed. Emblems appear in your RNV Sync folder; right-click for"
-echo "Baixar / Liberar espaço. Run 'php artisan rnvsync:nautilus-config'"
-echo "again after adding accounts."
+echo "Manter Local / Manter Online. If they don't show right away, log out and back"
+echo "in once. Run 'php artisan rnvsync:nautilus-config' again after adding accounts."
