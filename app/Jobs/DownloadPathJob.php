@@ -52,12 +52,14 @@ class DownloadPathJob implements ShouldBeUnique, ShouldQueue
 
         $local = $files->localPathFor($account, $this->path);
 
-        // Pause guard: a paused user wants downloads to STOP, not keep filling
-        // the disk. Surface a "paused" error so the user sees why and can
-        // re-trigger the download after resuming.
+        // Pause guard: a paused user wants downloads to STOP. Pause is the
+        // user's CHOICE, not a failure of the file — drop the in-flight marker
+        // and CLEAR any error so the file shows as a regular placeholder
+        // instead of "Erro: Sincronização pausada" (which alarms the user for
+        // no reason — nothing went wrong; they just paused).
         if (app(SyncService::class)->isPaused()) {
             PendingOps::clear($local);
-            PathErrors::mark($local, __('errors.sync_paused_skip'));
+            PathErrors::clear($local);
 
             return;
         }

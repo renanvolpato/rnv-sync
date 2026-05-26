@@ -63,18 +63,21 @@ it('disk guard is disabled at 100% and blocks once usage passes the threshold', 
     }
 });
 
-it('the download job skips when sync is paused and flags a paused error', function () {
+it('the download job skips SILENTLY when sync is paused (no scary error on the file)', function () {
     app(SyncService::class)->setPaused(true);
 
     $target = sys_get_temp_dir().'/rnv-pause-'.uniqid().'.bin';
+    // Seed a prior error to verify pause-skip CLEARS it (pause is a choice, not a failure).
+    PathErrors::mark($target, 'old error');
+
     $files = $this->mock(LocalFiles::class);
     $files->shouldReceive('localPathFor')->andReturn($target);
     $files->shouldNotReceive('download'); // pause must prevent the download
 
     (new DownloadPathJob($this->account->id, 'Big/file.bin'))->handle($files);
 
-    expect(PathErrors::has($target))->toBeTrue();
-    PathErrors::clear($target);
+    // No error indicator — the file stays a normal placeholder.
+    expect(PathErrors::has($target))->toBeFalse();
     app(SyncService::class)->setPaused(false);
 });
 
