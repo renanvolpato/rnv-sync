@@ -159,6 +159,14 @@
             @if ($desktopReport['ok'])
                 <p class="mt-4 text-sm text-emerald-600 dark:text-emerald-400">{{ __('settings.di_all_ok') }}</p>
             @endif
+
+            <div class="mt-4">
+                <flux:button wire:click="reapplyDesktop" wire:loading.attr="disabled" wire:target="reapplyDesktop"
+                    variant="ghost" size="sm" icon="arrow-path">
+                    <span wire:loading.remove wire:target="reapplyDesktop">{{ __('settings.di_reapply') }}</span>
+                    <span wire:loading wire:target="reapplyDesktop">{{ __('settings.update_checking') }}</span>
+                </flux:button>
+            </div>
         </flux:card>
     @endif
 

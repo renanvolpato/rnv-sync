@@ -61,4 +61,12 @@ return [
     'di_tray_binding_missing' => 'AppIndicator support is missing. Click Update above and approve the install.',
     'di_tray_gnome_ext' => 'GNOME hides tray icons without the AppIndicator shell extension. Update tries to enable it — log out and back in once to apply.',
     'di_tray_not_running' => 'The icon is not running right now. It returns when you log out and back in (it starts at login).',
+    'di_bases' => 'Watched folders',
+    'di_bases_ok' => 'Watched folders: :paths',
+    'di_bases_empty' => 'No folder is configured — that\'s why the extension shows nothing. Click "Re-apply integration" below.',
+    'di_bases_gone' => 'The configured folders no longer exist (:paths). Click "Re-apply integration".',
+    'di_fm_sandbox' => 'Sandboxed Nautilus (:pkg)',
+    'di_fm_sandbox_hint' => 'This Nautilus runs sandboxed and can\'t load host extensions — emblems and the menu won\'t appear. Install the system Nautilus (apt/dnf) to use the integration.',
+    'di_reapply' => 'Re-apply integration',
+    'di_reapplied' => 'Integration re-applied. If it still doesn\'t show, log out and back in once.',
 ];

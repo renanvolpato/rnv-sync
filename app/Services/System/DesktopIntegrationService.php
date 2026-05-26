@@ -43,6 +43,28 @@ class DesktopIntegrationService
                 $ext ? true : false, $ext ? '' : __('settings.di_extension_missing'));
             $items[] = $this->item('emblems', __('settings.di_emblems'),
                 $emblems, $emblems ? '' : __('settings.di_emblems_missing'));
+
+            // Watched folders: with no bases the extension shows NOTHING (no
+            // emblem, no menu) even when loaded — a common "does nothing" cause.
+            $bases = $this->configBases();
+            $onDisk = array_values(array_filter($bases, fn ($b) => is_dir($b)));
+            if ($bases === []) {
+                $items[] = $this->item('bases', __('settings.di_bases'), false, __('settings.di_bases_empty'));
+            } elseif ($onDisk === []) {
+                $items[] = $this->item('bases', __('settings.di_bases'), false,
+                    __('settings.di_bases_gone', ['paths' => implode(', ', $bases)]));
+            } else {
+                $items[] = $this->item('bases',
+                    __('settings.di_bases_ok', ['paths' => implode(', ', $onDisk)]), true, '');
+            }
+
+            // A snap/flatpak Nautilus runs sandboxed and can't load host
+            // python extensions — so emblems/menu never appear.
+            $pkg = $this->fileManagerSandbox();
+            if ($pkg !== null) {
+                $items[] = $this->item('fm_sandbox', __('settings.di_fm_sandbox', ['pkg' => $pkg]),
+                    false, __('settings.di_fm_sandbox_hint'));
+            }
         }
 
         // System tray.
@@ -175,6 +197,41 @@ class DesktopIntegrationService
     private function trayRunning(): bool
     {
         return $this->runOk(['pgrep', '-f', 'rnv-sync-tray.py']);
+    }
+
+    /** Folders the file-manager extension watches (empty → it shows nothing). */
+    private function configBases(): array
+    {
+        $home = (string) (getenv('HOME') ?: ($_SERVER['HOME'] ?? ''));
+        $file = $home.'/.config/rnv-sync/extension.json';
+        if ($home === '' || ! is_file($file)) {
+            return [];
+        }
+        $data = json_decode((string) @file_get_contents($file), true);
+
+        return is_array($data['bases'] ?? null)
+            ? array_values(array_filter($data['bases'], 'is_string'))
+            : [];
+    }
+
+    /** 'snap'/'flatpak' if the Nautilus binary is sandboxed (won't load host extensions), else null. */
+    private function fileManagerSandbox(): ?string
+    {
+        $path = trim((string) $this->run(['bash', '-c', 'command -v nautilus']));
+        if ($path === '') {
+            return null;
+        }
+        $real = trim((string) $this->run(['readlink', '-f', $path]));
+        $real = $real !== '' ? $real : $path;
+
+        if (str_contains($real, '/snap/')) {
+            return 'snap';
+        }
+        if (str_contains($real, 'flatpak')) {
+            return 'flatpak';
+        }
+
+        return null;
     }
 
     private function has(string $bin): bool

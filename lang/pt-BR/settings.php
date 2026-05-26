@@ -61,4 +61,12 @@ return [
     'di_tray_binding_missing' => 'Falta o suporte AppIndicator. Clique em Atualizar acima e autorize a instalação.',
     'di_tray_gnome_ext' => 'O GNOME esconde ícones de bandeja sem a extensão AppIndicator. A atualização tenta ativá-la — saia e entre na sessão uma vez para aplicar.',
     'di_tray_not_running' => 'O ícone não está em execução agora. Ele volta ao sair e entrar na sessão (inicia no login).',
+    'di_bases' => 'Pastas monitoradas',
+    'di_bases_ok' => 'Pastas monitoradas: :paths',
+    'di_bases_empty' => 'Nenhuma pasta configurada — por isso a extensão não mostra nada. Clique em “Reaplicar integração” abaixo.',
+    'di_bases_gone' => 'As pastas configuradas não existem mais (:paths). Clique em “Reaplicar integração”.',
+    'di_fm_sandbox' => 'Nautilus em sandbox (:pkg)',
+    'di_fm_sandbox_hint' => 'Esse Nautilus roda em sandbox e não carrega extensões do sistema — emblemas e menu não aparecem. Instale o Nautilus do repositório (apt/dnf) para usar a integração.',
+    'di_reapply' => 'Reaplicar integração',
+    'di_reapplied' => 'Integração reaplicada. Se ainda não aparecer, saia e entre na sessão uma vez.',
 ];

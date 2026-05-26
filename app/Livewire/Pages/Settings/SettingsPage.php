@@ -9,6 +9,7 @@ use App\Services\System\DesktopIntegrationService;
 use App\Services\Update\UpdateService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Process;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -174,6 +175,22 @@ class SettingsPage extends Component
         $this->updating = true;
         $this->updateStatus = null;
         $this->dispatch('toast', type: 'success', message: __('settings.update_started'));
+    }
+
+    /** Re-run the desktop integration (extension + emblems + tray) from the UI. */
+    public function reapplyDesktop(DesktopIntegrationService $desktop): void
+    {
+        $base = base_path();
+        foreach (['install/nautilus/install.sh', 'install/tray/install.sh'] as $script) {
+            try {
+                Process::path($base)->timeout(90)->run(['bash', $script]);
+            } catch (\Throwable) {
+                // Best-effort; the refreshed report below shows what still needs fixing.
+            }
+        }
+
+        $this->desktopReport = $desktop->report();
+        $this->dispatch('toast', type: 'success', message: __('settings.di_reapplied'));
     }
 
     public function render(RcloneBinary $binary, UpdateService $updater)

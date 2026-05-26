@@ -8,12 +8,15 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Added
 
-- **In-app "Desktop integration" diagnosis (Settings) — no terminal needed.**
-  Settings now shows, per item (file manager, emblems, right-click menu, tray),
-  whether it's working and, if not, why and what to do — e.g. "COSMIC Files /
-  Dolphin don't support this; use Nautilus/Nemo/Caja", or "GNOME hides tray icons
-  without the AppIndicator extension; log out/in once". A normal user reads the
-  screen instead of running a doctor script.
+- **In-app "Desktop integration" diagnosis + one-click re-apply (Settings) — no
+  terminal needed.** Settings shows, per item (file manager, emblems, right-click
+  menu, watched folders, tray), whether it's working and, if not, why and what to
+  do — e.g. "COSMIC Files / Dolphin don't support this; use Nautilus/Nemo/Caja",
+  "no folder is configured", "this Nautilus is sandboxed (snap/flatpak) and can't
+  load extensions", or "GNOME hides tray icons without the AppIndicator extension;
+  log out/in once". A **Re-apply integration** button re-runs the extension/tray
+  install from the UI. A normal user reads the screen and clicks a button instead
+  of running a doctor script.
 - **The installer auto-enables GNOME's AppIndicator shell extension.** On GNOME,
   the tray binding alone isn't enough — GNOME hides tray icons without the
   AppIndicator shell extension. The installer now installs and enables it (the #1
