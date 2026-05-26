@@ -5,6 +5,7 @@ namespace App\Livewire\Pages\Settings;
 use App\Services\Rclone\RcloneBinary;
 use App\Services\Settings\ConfigService;
 use App\Services\Settings\SettingsRepository;
+use App\Services\System\DesktopIntegrationService;
 use App\Services\Update\UpdateService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -52,8 +53,16 @@ class SettingsPage extends Component
 
     public bool $updating = false;
 
-    public function mount(SettingsRepository $settings): void
+    /** @var array<string,mixed> desktop-integration self-diagnosis for the view */
+    public array $desktopReport = [];
+
+    public function mount(SettingsRepository $settings, DesktopIntegrationService $desktop): void
     {
+        // Probe once per page load (not on every Livewire re-render). Skipped in
+        // tests so the suite stays hermetic (it shells out to which/python/etc.).
+        if (! app()->runningUnitTests()) {
+            $this->desktopReport = $desktop->report();
+        }
         $this->language = $settings->language();
         $this->storage_mode = $settings->storageMode();
         $this->mount_base = $settings->mountBase();

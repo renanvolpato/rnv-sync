@@ -127,6 +127,41 @@
         </div>
     </flux:card>
 
+    {{-- Desktop integration self-diagnosis (tray + file-manager emblems/menu) --}}
+    @if (! empty($desktopReport))
+        <flux:card>
+            <flux:heading size="lg">{{ __('settings.di_title') }}</flux:heading>
+            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                {{ __('settings.di_intro') }}
+                <span class="text-zinc-400">({{ $desktopReport['desktop'] }})</span>
+            </p>
+
+            <ul class="mt-4 space-y-3">
+                @foreach ($desktopReport['items'] as $item)
+                    <li class="flex items-start gap-3 text-sm">
+                        @if ($item['ok'] === true)
+                            <flux:icon.check-circle class="size-5 shrink-0 text-emerald-500" />
+                        @elseif ($item['ok'] === false)
+                            <flux:icon.x-circle class="size-5 shrink-0 text-rose-500" />
+                        @else
+                            <flux:icon.information-circle class="size-5 shrink-0 text-amber-500" />
+                        @endif
+                        <div>
+                            <p class="font-medium">{{ $item['label'] }}</p>
+                            @if ($item['hint'])
+                                <p class="text-zinc-500 dark:text-zinc-400">{{ $item['hint'] }}</p>
+                            @endif
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+
+            @if ($desktopReport['ok'])
+                <p class="mt-4 text-sm text-emerald-600 dark:text-emerald-400">{{ __('settings.di_all_ok') }}</p>
+            @endif
+        </flux:card>
+    @endif
+
     {{-- Config export / import (SPEC F5.9) --}}
     <flux:card>
         <flux:heading size="lg">{{ __('settings.section_config') }}</flux:heading>

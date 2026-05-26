@@ -44,4 +44,21 @@ return [
     'config_import' => 'Config file',
     'config_import_btn' => 'Import',
     'config_imported' => 'Configuration imported. Reconnect imported accounts.',
+
+    // Desktop integration (self-diagnosis shown in the UI — no terminal needed)
+    'di_title' => 'Desktop integration',
+    'di_intro' => 'Status of the tray icon and the file-manager emblems (☁/✓) + menu.',
+    'di_all_ok' => 'All good — the tray icon and emblems should appear.',
+    'di_unknown' => 'unknown',
+    'di_file_manager' => 'File manager: :fm',
+    'di_fm_unsupported' => ':fm does not support extension emblems/menu. To see the ☁/✓ icons and the “Keep local/online” menu, use GNOME Files (Nautilus), Nemo (Cinnamon) or Caja (MATE).',
+    'di_binding_missing' => 'The file-manager connector is missing. Click Update above and approve the install if prompted.',
+    'di_extension' => 'Emblems & right-click menu extension',
+    'di_extension_missing' => 'Not installed. Click Update above to reinstall it.',
+    'di_emblems' => 'Cloud/check icons in the file manager',
+    'di_emblems_missing' => 'Your icon theme does not resolve the emblems yet. Log out and back in once.',
+    'di_tray' => 'Tray icon (next to the clock)',
+    'di_tray_binding_missing' => 'AppIndicator support is missing. Click Update above and approve the install.',
+    'di_tray_gnome_ext' => 'GNOME hides tray icons without the AppIndicator shell extension. Update tries to enable it — log out and back in once to apply.',
+    'di_tray_not_running' => 'The icon is not running right now. It returns when you log out and back in (it starts at login).',
 ];

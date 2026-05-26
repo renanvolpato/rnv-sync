@@ -50,18 +50,54 @@ install_inotify() {
 }
 
 install_tray_deps() {
-  if python3 -c "import gi; gi.require_version('AyatanaAppIndicator3','0.1')" 2>/dev/null \
-     || python3 -c "import gi; gi.require_version('AppIndicator3','0.1')" 2>/dev/null; then
+  # 1) The AppIndicator binding so the tray PROCESS can create an icon.
+  if ! python3 -c "import gi; gi.require_version('AyatanaAppIndicator3','0.1')" 2>/dev/null \
+     && ! python3 -c "import gi; gi.require_version('AppIndicator3','0.1')" 2>/dev/null; then
+    say "Installing the tray indicator deps (status icon next to the clock)"
+    case "${DISTRO}" in
+      ubuntu|debian|pop|linuxmint) ${SUDO} apt-get install -y python3-gi gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1 ;;
+      fedora|rhel|centos) ${SUDO} dnf install -y python3-gobject gtk3 libayatana-appindicator-gtk3 ;;
+      arch|manjaro) ${SUDO} pacman -S --noconfirm python-gobject gtk3 libayatana-appindicator ;;
+      alpine) ${SUDO} apk add --no-cache py3-gobject3 gtk+3.0 libayatana-appindicator ;;
+      *) warn "Unknown distro. Install python3-gi + ayatana-appindicator for the tray." ;;
+    esac
+  fi
+
+  # 2) On GNOME Shell the binding is NOT enough: GNOME hides all tray icons
+  #    unless the AppIndicator shell extension is installed AND enabled. This is
+  #    the #1 reason "the tray doesn't show" on GNOME (Fedora/Debian/vanilla).
+  enable_gnome_appindicator
+}
+
+enable_gnome_appindicator() {
+  # GNOME only. Detect via the session var or the gnome-shell binary (the var
+  # may be unset when the updater runs detached).
+  case "${XDG_CURRENT_DESKTOP:-}:${DESKTOP_SESSION:-}" in
+    *[Gg][Nn][Oo][Mm][Ee]*) : ;;
+    *) command -v gnome-shell >/dev/null 2>&1 || return 0 ;;
+  esac
+
+  # Already enabled? nothing to do.
+  if command -v gnome-extensions >/dev/null 2>&1 \
+     && gnome-extensions list --enabled 2>/dev/null | grep -qi appindicator; then
     return 0
   fi
-  say "Installing the tray indicator deps (status icon next to the clock)"
+
+  say "Enabling GNOME's tray-icon (AppIndicator) shell extension"
   case "${DISTRO}" in
-    ubuntu|debian|pop|linuxmint) ${SUDO} apt-get install -y python3-gi gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1 ;;
-    fedora|rhel|centos) ${SUDO} dnf install -y python3-gobject gtk3 libayatana-appindicator-gtk3 ;;
-    arch|manjaro) ${SUDO} pacman -S --noconfirm python-gobject gtk3 libayatana-appindicator ;;
-    alpine) ${SUDO} apk add --no-cache py3-gobject3 gtk+3.0 libayatana-appindicator ;;
-    *) warn "Unknown distro. Install python3-gi + ayatana-appindicator for the tray." ;;
+    ubuntu|pop|linuxmint|debian) ${SUDO} apt-get install -y gnome-shell-extension-appindicator || true ;;
+    fedora|rhel|centos) ${SUDO} dnf install -y gnome-shell-extension-appindicator || true ;;
+    arch|manjaro) warn "Install the AUR 'gnome-shell-extension-appindicator' for tray icons." ;;
+    *) warn "Install the GNOME AppIndicator shell extension for tray icons." ;;
   esac
+
+  # Enable whichever id is present (Ubuntu ships one id; upstream another).
+  if command -v gnome-extensions >/dev/null 2>&1; then
+    for ext in ubuntu-appindicators@ubuntu.com appindicatorsupport@rgcjonas.gmail.com; do
+      gnome-extensions enable "$ext" 2>/dev/null && break
+    done
+  fi
+  warn "If the tray icon still doesn't show, log out and back in once (GNOME loads shell extensions at login)."
 }
 
 install_fm_python() {

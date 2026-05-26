@@ -44,4 +44,21 @@ return [
     'config_import' => 'Arquivo de configuração',
     'config_import_btn' => 'Importar',
     'config_imported' => 'Configuração importada. Reconecte as contas importadas.',
+
+    // Desktop integration (self-diagnosis shown in the UI — no terminal needed)
+    'di_title' => 'Integração com o desktop',
+    'di_intro' => 'Estado do ícone na bandeja e dos emblemas (☁/✓) + menu no gerenciador de arquivos.',
+    'di_all_ok' => 'Tudo certo — a bandeja e os emblemas devem aparecer.',
+    'di_unknown' => 'desconhecido',
+    'di_file_manager' => 'Gerenciador de arquivos: :fm',
+    'di_fm_unsupported' => ':fm não suporta emblemas/menu de extensão. Para ver os ícones ☁/✓ e o menu “Manter Local/Online”, use o GNOME Files (Nautilus), o Nemo (Cinnamon) ou o Caja (MATE).',
+    'di_binding_missing' => 'Falta o conector do gerenciador. Clique em Atualizar acima e, se pedir senha, autorize a instalação.',
+    'di_extension' => 'Extensão de emblemas e menu',
+    'di_extension_missing' => 'Não instalada. Clique em Atualizar acima para reinstalar.',
+    'di_emblems' => 'Ícones ☁/✓ no gerenciador',
+    'di_emblems_missing' => 'O tema de ícones ainda não reconhece os emblemas. Saia e entre na sessão uma vez.',
+    'di_tray' => 'Ícone na bandeja (perto do relógio)',
+    'di_tray_binding_missing' => 'Falta o suporte AppIndicator. Clique em Atualizar acima e autorize a instalação.',
+    'di_tray_gnome_ext' => 'O GNOME esconde ícones de bandeja sem a extensão AppIndicator. A atualização tenta ativá-la — saia e entre na sessão uma vez para aplicar.',
+    'di_tray_not_running' => 'O ícone não está em execução agora. Ele volta ao sair e entrar na sessão (inicia no login).',
 ];
