@@ -11,6 +11,12 @@ use Livewire\Livewire;
 beforeEach(function () {
     $this->actingAs(User::factory()->create());
 
+    // The component now gates listing on RcloneBinary::isAvailable(), which
+    // checks a real file. CI clones don't ship the rclone binary (gitignored),
+    // so point at a real, executable path so isAvailable() is true. The
+    // 'genuinely missing' test below overrides this with a bogus path.
+    config(['rnvsync.rclone.binary_path' => '/bin/bash']);
+
     // Token far from expiry so listRemote() never hits the network.
     $this->account = Account::factory()->create([
         'oauth_token' => json_encode([

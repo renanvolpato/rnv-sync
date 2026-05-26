@@ -16,6 +16,9 @@ beforeEach(function () {
     $this->base = sys_get_temp_dir().'/rnv-phys-'.uniqid();
     app(SettingsRepository::class)->set(SettingsRepository::KEY_MOUNT_BASE, $this->base);
     app(SettingsRepository::class)->set(SettingsRepository::KEY_STORAGE_MODE, 'physical');
+    // FileBrowser gates listing on RcloneBinary::isAvailable() (real file check);
+    // CI doesn't ship the rclone binary, so point at a real executable.
+    config(['rnvsync.rclone.binary_path' => '/bin/bash']);
     $this->account = Account::factory()->create(['name' => 'OneDrive', 'remote_name' => 'od1']);
 });
 
