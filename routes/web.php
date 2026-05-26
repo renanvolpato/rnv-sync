@@ -14,6 +14,7 @@ use App\Livewire\Pages\SearchPage;
 use App\Livewire\Pages\Settings\SettingsPage;
 use App\Livewire\Pages\Setup\Wizard;
 use App\Livewire\Pages\TrendsPage;
+use App\Services\Sync\SyncService;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Session\Middleware\StartSession;
@@ -42,6 +43,19 @@ Route::get('/sync-state', SyncStateController::class)
         ShareErrorsFromSession::class,
         ValidateCsrfToken::class,
     ]);
+
+// Toggle global pause from the system tray. Localhost-only (the panel binds to
+// 127.0.0.1), no session/CSRF so the tray can flip it with one POST.
+Route::post('/sync-state/pause', function (SyncService $sync) {
+    $sync->setPaused(! $sync->isPaused());
+
+    return response()->json(['paused' => $sync->isPaused()]);
+})->name('sync-pause')->withoutMiddleware([
+    EncryptCookies::class,
+    StartSession::class,
+    ShareErrorsFromSession::class,
+    ValidateCsrfToken::class,
+]);
 
 // First-run setup wizard (gated by EnsureSetupComplete middleware).
 Route::get('/setup', Wizard::class)->name('setup.index');

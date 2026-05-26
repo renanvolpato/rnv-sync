@@ -25,6 +25,8 @@ return [
     'resume_folder' => 'Retomar',
     'pause' => 'Pausar tudo',
     'resume' => 'Retomar tudo',
+    'paused_toast' => 'Sincronização pausada. Nada sincroniza até você retomar.',
+    'resumed_toast' => 'Sincronização retomada.',
     'syncing' => 'Sincronizando…',
 
     'status_success' => 'última sincronização OK',

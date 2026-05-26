@@ -78,3 +78,13 @@ it('reports no live transfer when nothing is running (transfer = null)', functio
     expect($json['transfer'])->toBeNull();
     Http::assertNothingSent();
 });
+
+it('reports the paused flag and the tray pause endpoint toggles it (no auth/CSRF)', function () {
+    expect($this->get('/sync-state')->json('paused'))->toBeFalse();
+
+    $this->post('/sync-state/pause')->assertOk()->assertJson(['paused' => true]);
+    expect($this->get('/sync-state')->json('paused'))->toBeTrue();
+
+    $this->post('/sync-state/pause')->assertOk()->assertJson(['paused' => false]);
+    expect($this->get('/sync-state')->json('paused'))->toBeFalse();
+});

@@ -8,6 +8,7 @@ use App\Models\SyncFolder;
 use App\Models\SyncHistory;
 use App\Services\Files\PendingOps;
 use App\Services\Rclone\RcloneRunner;
+use App\Services\Sync\SyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -28,7 +29,7 @@ use Illuminate\Support\Facades\Http;
  */
 class SyncStateController extends Controller
 {
-    public function __invoke(): JsonResponse
+    public function __invoke(SyncService $sync): JsonResponse
     {
         $items = [];
         $transfer = null;
@@ -101,6 +102,7 @@ class SyncStateController extends Controller
 
         return response()->json([
             'syncing' => $syncing,
+            'paused' => $sync->isPaused(),
             'pending' => $pending,
             'items' => array_slice($items, 0, 20),
             'count' => count($items),

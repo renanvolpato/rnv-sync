@@ -68,6 +68,7 @@
                     <flux:button :href="route('trends')" variant="ghost" size="sm" icon="chart-bar">
                         {{ __('trends.title') }}
                     </flux:button>
+                    <livewire:sync-toggle />
                     <livewire:update-checker />
 
                     <flux:button :href="route('settings')" variant="ghost" size="sm" icon="cog-6-tooth">

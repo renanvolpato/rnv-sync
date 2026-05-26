@@ -25,6 +25,8 @@ return [
     'resume_folder' => 'Resume',
     'pause' => 'Pause all sync',
     'resume' => 'Resume all sync',
+    'paused_toast' => 'Sync paused. Nothing will sync until you resume.',
+    'resumed_toast' => 'Sync resumed.',
     'syncing' => 'Syncing…',
 
     'status_success' => 'last sync OK',

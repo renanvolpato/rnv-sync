@@ -87,20 +87,25 @@ class Tray:
         self.ind.set_title("RNV Sync")
 
         self._syncing = False
+        self._paused = False
         self._frame = 0
         self._idle_shown = False  # is the static cloud icon currently shown?
         self._sig = None  # last rendered menu signature (avoid flicker)
-        self._rebuild_menu(False, [], 0, None)
+        self._rebuild_menu(False, [], 0, None, False)
 
         GLib.timeout_add(POLL_MS, self._poll)
         GLib.timeout_add(ANIM_MS, self._animate)
         self._poll()
 
     # ---- menu -----------------------------------------------------------
-    def _rebuild_menu(self, syncing, items, count, transfer):
+    def _rebuild_menu(self, syncing, items, count, transfer, paused):
         m = Gtk.Menu()
 
-        if syncing:
+        if paused:
+            header = Gtk.MenuItem(label="Sincronização pausada")
+            header.set_sensitive(False)
+            m.append(header)
+        elif syncing:
             header = Gtk.MenuItem(label=_header_label(syncing, items, count, transfer))
             header.set_sensitive(False)
             m.append(header)
@@ -119,34 +124,53 @@ class Tray:
 
         m.append(Gtk.SeparatorMenuItem())
 
+        # The real on/off — flips global pause via the local panel.
+        pause_item = Gtk.MenuItem(
+            label="Retomar sincronização" if paused else "Pausar sincronização"
+        )
+        pause_item.connect("activate", lambda *_: self._toggle_pause())
+        m.append(pause_item)
+
         open_item = Gtk.MenuItem(label="Abrir RNV Sync")
         open_item.connect("activate", lambda *_: self._open())
         m.append(open_item)
 
-        quit_item = Gtk.MenuItem(label="Sair")
+        # NOTE: this only hides the tray icon; syncing keeps running in the
+        # background. Use "Pausar sincronização" above to actually stop it.
+        quit_item = Gtk.MenuItem(label="Ocultar ícone")
         quit_item.connect("activate", lambda *_: Gtk.main_quit())
         m.append(quit_item)
 
         m.show_all()
         self.ind.set_menu(m)
 
+    def _toggle_pause(self):
+        try:
+            req = urllib.request.Request(URL + "/sync-state/pause", method="POST", data=b"")
+            urllib.request.urlopen(req, timeout=4)
+        except Exception:
+            pass
+        self._poll()  # reflect the new state immediately
+
     def _open(self):
         subprocess.Popen(["xdg-open", URL])
 
     # ---- polling --------------------------------------------------------
     def _poll(self):
-        syncing, items, count, transfer = False, [], 0, None
+        syncing, items, count, transfer, paused = False, [], 0, None, False
         try:
             with urllib.request.urlopen(URL + "/sync-state", timeout=4) as r:
                 data = json.load(r)
             syncing = bool(data.get("syncing"))
+            paused = bool(data.get("paused"))
             items = data.get("items", []) or []
             count = int(data.get("count", len(items)))
             transfer = data.get("transfer")
         except Exception:
-            syncing, items, count, transfer = False, [], 0, None
+            syncing, items, count, transfer, paused = False, [], 0, None, False
 
         self._syncing = syncing
+        self._paused = paused
         # The icon is owned by _animate so the spinner→cloud switch is one
         # clean change: setting the static icon here every poll raced the
         # 120ms animation and some panels left it stuck on a spinner frame.
@@ -155,14 +179,14 @@ class Tray:
         # live progress (pct/dir) and done/total so the menu animates as
         # files climb to 100% and the next one starts.
         sig = (
-            syncing, count,
+            syncing, paused, count,
             (transfer or {}).get("done"), (transfer or {}).get("total"),
             tuple((i.get("name", ""), i.get("pct"), i.get("dir"))
                   for i in items[:MAX_ROWS]),
         )
         if sig != self._sig:
             self._sig = sig
-            self._rebuild_menu(syncing, items, count, transfer)
+            self._rebuild_menu(syncing, items, count, transfer, paused)
 
         return True  # keep polling
 

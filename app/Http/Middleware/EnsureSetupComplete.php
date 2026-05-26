@@ -25,7 +25,9 @@ class EnsureSetupComplete
         // environment is ready; never bounce away from it. The tray
         // status poll must also answer regardless of setup state
         // (it's localhost-only and exposes no secrets).
-        if ($request->routeIs('requirements*') || $request->routeIs('sync-state')) {
+        if ($request->routeIs('requirements*')
+            || $request->routeIs('sync-state')
+            || $request->routeIs('sync-pause')) {
             return $next($request);
         }
 

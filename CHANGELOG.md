@@ -8,6 +8,10 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Added
 
+- **Pause / Resume sync from the app header and the system tray.** A clear on/off
+  control is now on every page (and in the tray menu), flipping the global pause
+  the scheduled sync already respects — instead of being buried in a per-account
+  page. The tray reads/sets it via a localhost endpoint.
 - **File-manager emblems now work on Nemo (Cinnamon / Linux Mint) and Caja
   (MATE), not just Nautilus (GNOME).** The three share the nautilus-python API,
   so one extension auto-binds to the host file manager; the installer installs it
@@ -92,6 +96,13 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Fixed
 
+- **The tray "Sair" no longer looks like it stops syncing.** It only quit the
+  tray process — the background sync kept running (and kept filling the disk),
+  which was confusing. It's relabeled **"Ocultar ícone"** (it only hides the
+  icon), and a real **Pausar/Retomar sincronização** item was added to the tray
+  (plus the header control above). The tray now also relaunches right after an
+  update — it pulls the graphical env (`DISPLAY`/Wayland) from systemd when the
+  detached updater lacks it — instead of reappearing only on the next login.
 - **File-manager emblem install is now self-diagnosing (helps Pop!_OS).** The
   Nautilus extension installer prints whether the ☁/✓ emblems actually resolve in
   your icon theme, detects the COSMIC desktop (whose file manager isn't Nautilus
