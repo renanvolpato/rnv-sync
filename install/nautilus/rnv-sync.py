@@ -129,10 +129,26 @@ _EMBLEM = {
 }
 
 
+def _write_loaded_marker():
+    """Tell the app whether the file manager actually loaded the extension —
+    surfaced in Settings → "Integração com o desktop" (Extensão carregada há
+    Xmin / NÃO carregada). Best-effort; never breaks the extension."""
+    try:
+        import time
+        d = os.path.expanduser("~/.cache/rnv-sync")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "extension-loaded.json"), "w") as fh:
+            fh.write('{"loaded_at": %d, "fm": "%s"}' % (
+                int(time.time()), FM.__name__.split(".")[-1]))
+    except Exception:
+        pass
+
+
 class RnvSyncExtension(GObject.GObject, FM.InfoProvider, FM.MenuProvider):
 
     def __init__(self):
         super().__init__()
+        _write_loaded_marker()
         # Live refresh: the file manager only re-reads emblems when asked, so
         # poll the (small) set of on-screen items every 2s and force a
         # re-read of any whose state changed — emblems update on their

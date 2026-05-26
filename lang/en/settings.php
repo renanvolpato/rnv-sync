@@ -69,4 +69,7 @@ return [
     'di_fm_sandbox_hint' => 'This Nautilus runs sandboxed and can\'t load host extensions — emblems and the menu won\'t appear. Install the system Nautilus (apt/dnf) to use the integration.',
     'di_reapply' => 'Re-apply integration',
     'di_reapplied' => 'Integration re-applied. If it still doesn\'t show, log out and back in once.',
+    'di_ext_loaded_at' => 'Extension loaded by Nautilus (:when ago)',
+    'di_ext_not_loaded' => 'Extension NOT loaded by Nautilus',
+    'di_ext_not_loaded_hint' => 'Nautilus did not instantiate the extension. Click "Re-apply integration" below; if it still doesn\'t show, log out and back in once.',
 ];

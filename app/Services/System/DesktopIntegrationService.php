@@ -41,6 +41,17 @@ class DesktopIntegrationService
                 $binding ? true : false, $binding ? '' : __('settings.di_binding_missing'));
             $items[] = $this->item('extension', __('settings.di_extension'),
                 $ext ? true : false, $ext ? '' : __('settings.di_extension_missing'));
+
+            // Was the extension actually loaded by the file manager? (the file
+            // being on disk doesn't mean Nautilus instantiated our class).
+            $loadedAt = $this->extensionLoadedAt();
+            if ($loadedAt === null) {
+                $items[] = $this->item('ext_loaded', __('settings.di_ext_not_loaded'),
+                    false, __('settings.di_ext_not_loaded_hint'));
+            } else {
+                $items[] = $this->item('ext_loaded',
+                    __('settings.di_ext_loaded_at', ['when' => $this->humanAgo($loadedAt)]), true, '');
+            }
             $items[] = $this->item('emblems', __('settings.di_emblems'),
                 $emblems, $emblems ? '' : __('settings.di_emblems_missing'));
 
@@ -197,6 +208,35 @@ class DesktopIntegrationService
     private function trayRunning(): bool
     {
         return $this->runOk(['pgrep', '-f', 'rnv-sync-tray.py']);
+    }
+
+    /** Unix-timestamp the extension last wrote its "loaded" marker (null = never). */
+    private function extensionLoadedAt(): ?int
+    {
+        $home = (string) (getenv('HOME') ?: ($_SERVER['HOME'] ?? ''));
+        $file = $home.'/.cache/rnv-sync/extension-loaded.json';
+        if ($home === '' || ! is_file($file)) {
+            return null;
+        }
+        $data = json_decode((string) @file_get_contents($file), true);
+
+        return is_array($data) && isset($data['loaded_at']) ? (int) $data['loaded_at'] : null;
+    }
+
+    private function humanAgo(int $ts): string
+    {
+        $sec = max(0, time() - $ts);
+        if ($sec < 60) {
+            return $sec.'s';
+        }
+        if ($sec < 3600) {
+            return intdiv($sec, 60).' min';
+        }
+        if ($sec < 86400) {
+            return intdiv($sec, 3600).' h';
+        }
+
+        return intdiv($sec, 86400).' d';
     }
 
     /** Folders the file-manager extension watches (empty → it shows nothing). */

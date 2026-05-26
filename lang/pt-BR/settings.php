@@ -69,4 +69,7 @@ return [
     'di_fm_sandbox_hint' => 'Esse Nautilus roda em sandbox e não carrega extensões do sistema — emblemas e menu não aparecem. Instale o Nautilus do repositório (apt/dnf) para usar a integração.',
     'di_reapply' => 'Reaplicar integração',
     'di_reapplied' => 'Integração reaplicada. Se ainda não aparecer, saia e entre na sessão uma vez.',
+    'di_ext_loaded_at' => 'Extensão carregada pelo Nautilus (há :when)',
+    'di_ext_not_loaded' => 'Extensão NÃO foi carregada pelo Nautilus',
+    'di_ext_not_loaded_hint' => 'O Nautilus não instanciou a extensão. Clique em “Reaplicar integração” abaixo e, se mesmo assim não aparecer, saia e entre na sessão uma vez.',
 ];

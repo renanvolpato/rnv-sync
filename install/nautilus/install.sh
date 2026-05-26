@@ -43,14 +43,45 @@ fi
 
 # Custom emblem icons (blue cloud / green check / sync arrows). All GTK file
 # managers read the freedesktop hicolor theme, so one copy serves all three.
-ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/emblems"
-mkdir -p "${ICON_DIR}"
-cp install/nautilus/icons/emblem-rnvsync-*.svg "${ICON_DIR}/"
-if [ ! -f "${HOME}/.local/share/icons/hicolor/index.theme" ] \
-   && [ -f /usr/share/icons/hicolor/index.theme ]; then
-  cp /usr/share/icons/hicolor/index.theme "${HOME}/.local/share/icons/hicolor/index.theme"
-fi
-gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+ensure_emblems_in() {
+  # $1 = base icons dir (e.g., ~/.local/share/icons/hicolor OR ~/.icons/hicolor)
+  local base="$1"
+  local emblems="${base}/scalable/emblems"
+  mkdir -p "${emblems}"
+  cp install/nautilus/icons/emblem-rnvsync-*.svg "${emblems}/"
+
+  # Bring (or seed) the hicolor index.theme so GTK actually scans this dir.
+  local theme="${base}/index.theme"
+  if [ ! -f "${theme}" ] && [ -f /usr/share/icons/hicolor/index.theme ]; then
+    cp /usr/share/icons/hicolor/index.theme "${theme}"
+  fi
+
+  # GTK only scans directories listed in [scalable/emblems]; a truncated/older
+  # index.theme without it silently hides our custom emblems even when present
+  # (a common cross-distro/theme cause on Pop!_OS). Add the section if missing.
+  if [ -f "${theme}" ] && ! grep -q '^\[scalable/emblems\]' "${theme}"; then
+    if grep -q '^Directories=' "${theme}"; then
+      grep -q '^Directories=.*scalable/emblems' "${theme}" \
+        || sed -i 's|^\(Directories=.*\)|\1,scalable/emblems|' "${theme}"
+    else
+      printf '\nDirectories=scalable/emblems\n' >> "${theme}"
+    fi
+    cat >> "${theme}" <<'EOF'
+
+[scalable/emblems]
+Size=48
+MinSize=8
+MaxSize=512
+Type=Scalable
+Context=Emblems
+EOF
+  fi
+
+  gtk-update-icon-cache -f -t "${base}" 2>/dev/null || true
+}
+
+ensure_emblems_in "${HOME}/.local/share/icons/hicolor"
+ensure_emblems_in "${HOME}/.icons/hicolor"     # legacy fallback some setups read
 
 # Extension config (CLI path + account base dirs) — shared by all file managers.
 php artisan rnvsync:nautilus-config
