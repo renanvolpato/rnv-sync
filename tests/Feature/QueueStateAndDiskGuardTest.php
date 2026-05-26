@@ -7,6 +7,7 @@ use App\Services\Files\DiskGuard;
 use App\Services\Files\LocalFiles;
 use App\Services\Files\PathErrors;
 use App\Services\Files\QueuedFileOps;
+use App\Services\Sync\SyncService;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
@@ -60,6 +61,21 @@ it('disk guard is disabled at 100% and blocks once usage passes the threshold', 
         config(['rnvsync.sync.download_max_disk_percent' => $used - 1.0]);
         expect(DiskGuard::hasRoom(sys_get_temp_dir()))->toBeFalse(); // past threshold
     }
+});
+
+it('the download job skips when sync is paused and flags a paused error', function () {
+    app(SyncService::class)->setPaused(true);
+
+    $target = sys_get_temp_dir().'/rnv-pause-'.uniqid().'.bin';
+    $files = $this->mock(LocalFiles::class);
+    $files->shouldReceive('localPathFor')->andReturn($target);
+    $files->shouldNotReceive('download'); // pause must prevent the download
+
+    (new DownloadPathJob($this->account->id, 'Big/file.bin'))->handle($files);
+
+    expect(PathErrors::has($target))->toBeTrue();
+    PathErrors::clear($target);
+    app(SyncService::class)->setPaused(false);
 });
 
 it('the download job skips and flags an error when the disk is past the fill threshold', function () {

@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Models\SyncFolder;
 use App\Services\Files\LocalFiles;
+use App\Services\Sync\SyncService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -35,6 +36,12 @@ class RefreshPlaceholdersCommand extends Command
 
     public function handle(LocalFiles $files): int
     {
+        if (app(SyncService::class)->isPaused()) {
+            $this->info('Sync is paused — skipping placeholder refresh.');
+
+            return self::SUCCESS;
+        }
+
         $ttl = max(60, (int) config('rnvsync.sync.placeholder_refresh_minutes', 120) * 60);
         $force = (bool) $this->option('force');
         $refreshed = 0;

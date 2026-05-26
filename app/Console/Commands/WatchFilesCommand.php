@@ -10,6 +10,7 @@ use App\Jobs\SyncChangesJob;
 use App\Models\SyncFolder;
 use App\Services\Files\PendingOps;
 use App\Services\Settings\SettingsRepository;
+use App\Services\Sync\SyncService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
 
@@ -299,11 +300,20 @@ class WatchFilesCommand extends Command
 
             $now = microtime(true);
 
+            $paused = app(SyncService::class)->isPaused();
             foreach ($dirty as $id => $changedAt) {
                 if ($now - $changedAt < self::DEBOUNCE_SECONDS) {
                     continue;
                 }
                 if ($now - ($lastSync[$id] ?? 0) < self::MIN_INTERVAL_SECONDS) {
+                    continue;
+                }
+                if ($paused) {
+                    // Drop the trigger silently — once the user resumes, the
+                    // 15-min scheduled sync covers any backlog. (Releasing here
+                    // would keep retrying jobs forever during a long pause.)
+                    unset($dirty[$id]);
+
                     continue;
                 }
                 SyncChangesJob::dispatch($id);

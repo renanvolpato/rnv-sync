@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Models\SyncFolder;
 use App\Services\Rclone\RcloneConfigGenerator;
 use App\Services\Rclone\RcloneRunner;
+use App\Services\Sync\SyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -102,6 +103,13 @@ class SyncChangesJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(RcloneRunner $rclone, RcloneConfigGenerator $config): void
     {
+        // Honor a global pause: skip this run; the 15-min scheduler (which also
+        // respects pause) re-dispatches once the user resumes. Drops the job
+        // instead of releasing so a long pause doesn't burn through retries.
+        if (app(SyncService::class)->isPaused()) {
+            return;
+        }
+
         $folder = SyncFolder::with('account')->find($this->syncFolderId);
 
         if (! $folder || ! $folder->is_active || $folder->sync_mode !== 'on_demand'

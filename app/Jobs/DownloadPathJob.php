@@ -9,6 +9,7 @@ use App\Services\Files\DiskGuard;
 use App\Services\Files\LocalFiles;
 use App\Services\Files\PathErrors;
 use App\Services\Files\PendingOps;
+use App\Services\Sync\SyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -50,6 +51,16 @@ class DownloadPathJob implements ShouldBeUnique, ShouldQueue
         }
 
         $local = $files->localPathFor($account, $this->path);
+
+        // Pause guard: a paused user wants downloads to STOP, not keep filling
+        // the disk. Surface a "paused" error so the user sees why and can
+        // re-trigger the download after resuming.
+        if (app(SyncService::class)->isPaused()) {
+            PendingOps::clear($local);
+            PathErrors::mark($local, __('errors.sync_paused_skip'));
+
+            return;
+        }
 
         // Disk guard: never let "keep local" fill the disk. If the target
         // filesystem is past the fill threshold, skip and surface an error

@@ -11,4 +11,5 @@ return [
     'listing_failed_title' => 'Não foi possível carregar esta pasta',
     'listing_failed_body' => 'Houve um erro temporário ao listar esta pasta (conexão ou sessão). Tentando novamente automaticamente…',
     'disk_full_skip' => 'Download ignorado: o disco está quase cheio. Libere espaço (marque pastas como online) ou aumente o limite em configurações.',
+    'sync_paused_skip' => 'Sincronização pausada — download ignorado. Retome a sincronização para continuar.',
 ];

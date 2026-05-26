@@ -17,6 +17,7 @@ use App\Services\Rclone\RcloneRunner;
 use App\Services\Settings\SettingsRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Bidirectional folder sync via `rclone bisync` (SPEC F2.2).
@@ -43,6 +44,26 @@ class SyncService
     public function setPaused(bool $paused): void
     {
         $this->settings->set('sync_paused', $paused);
+
+        // Pause has to be visible IMMEDIATELY: kill any rclone process this app
+        // spawned (recursive copies of a "keep local" folder can run for many
+        // minutes and would otherwise keep filling the disk). Matching on the
+        // app's config path is unique enough to never hit unrelated rclones.
+        if ($paused) {
+            $this->killRunningRclone();
+        }
+    }
+
+    /** SIGTERM every rclone this app started (identified by our --config path). */
+    private function killRunningRclone(): void
+    {
+        try {
+            Process::timeout(5)->run([
+                'pkill', '-TERM', '-f', storage_path('rclone/rclone.conf'),
+            ]);
+        } catch (\Throwable) {
+            // Best-effort — pause still takes effect via the per-job checks.
+        }
     }
 
     /**
