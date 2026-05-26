@@ -119,9 +119,15 @@
                                 @if ($syncing)
                                     <span class="text-xs text-zinc-400">{{ __('common.loading') }}</span>
                                 @elseif ($err)
-                                    <span title="{{ $entry['errmsg'] ?? __('cache.tip_error') }}">
+                                    {{-- On error, offer BOTH Retry and Manter Online: a
+                                         retry-only row traps the user when the cause was
+                                         pause/disk-guard/etc. (the error keeps coming back). --}}
+                                    <span title="{{ $entry['errmsg'] ?? __('cache.tip_error') }}" class="inline-flex items-center gap-1">
                                         <flux:button wire:click="download('{{ addslashes($entry['name']) }}', {{ $entry['is_dir'] ? 'true' : 'false' }}, {{ $entry['size'] }})" size="xs" variant="ghost" icon="arrow-path">
                                             {{ __('common.retry') }}
+                                        </flux:button>
+                                        <flux:button wire:click="free('{{ addslashes($entry['name']) }}')" size="xs" variant="ghost" icon="cloud">
+                                            {{ __('cache.free') }}
                                         </flux:button>
                                     </span>
                                 @elseif ($down)
