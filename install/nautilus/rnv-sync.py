@@ -64,6 +64,35 @@ if FM is None:  # no supported binding present — nothing we can do
 
 from gi.repository import GObject, GLib  # noqa: E402
 
+
+def _register_emblem_path():
+    """Tell the host's GTK IconTheme to scan our emblems dir directly. The
+    install copies them into hicolor and tweaks index.theme, but some themes
+    (notably Pop!_OS) won't resolve custom emblems via inheritance — this is
+    the deterministic fix: bypass theme lookup entirely. Tries GTK 4 first
+    (modern Nautilus), falls back to GTK 3 (Nautilus 3 / Nemo / Caja)."""
+    p = os.path.expanduser("~/.local/share/icons/hicolor/scalable/emblems")
+    try:
+        gi.require_version("Gtk", "4.0")
+        gi.require_version("Gdk", "4.0")
+        from gi.repository import Gdk as _Gdk4
+        from gi.repository import Gtk as _Gtk4
+        disp = _Gdk4.Display.get_default()
+        if disp is not None:
+            _Gtk4.IconTheme.get_for_display(disp).add_search_path(p)
+            return
+    except Exception:
+        pass
+    try:
+        gi.require_version("Gtk", "3.0")
+        from gi.repository import Gtk as _Gtk3
+        _Gtk3.IconTheme.get_default().append_search_path(p)
+    except Exception:
+        pass
+
+
+_register_emblem_path()
+
 CONFIG = os.path.expanduser("~/.config/rnv-sync/extension.json")
 
 
