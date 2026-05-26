@@ -102,9 +102,23 @@ class Tray:
         m = Gtk.Menu()
 
         if paused:
-            header = Gtk.MenuItem(label="Sincronização pausada")
+            # Even when paused, a one-shot user action (Keep online / Keep local)
+            # still runs. List those so the user can see what's still finishing
+            # instead of an empty menu that hides the progress.
+            label = "Sincronização pausada"
+            if count > 0:
+                label = f"Pausado — concluindo ({count})…"
+            header = Gtk.MenuItem(label=label)
             header.set_sensitive(False)
             m.append(header)
+            for it in items[:MAX_ROWS]:
+                row = Gtk.MenuItem(label=_row_label(it))
+                row.set_sensitive(False)
+                m.append(row)
+            if count > MAX_ROWS:
+                more = Gtk.MenuItem(label=f"… e mais {count - MAX_ROWS}")
+                more.set_sensitive(False)
+                m.append(more)
         elif syncing:
             header = Gtk.MenuItem(label=_header_label(syncing, items, count, transfer))
             header.set_sensitive(False)
