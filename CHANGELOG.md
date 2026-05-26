@@ -8,6 +8,11 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Added
 
+- **`install/doctor.sh` — desktop-integration diagnostic.** One command reports
+  why the tray icon and/or file-manager emblems aren't showing: the desktop in
+  use, file managers present, extension bindings, whether the extension/icons are
+  installed and resolve, the tray process, and whether GNOME's appindicator shell
+  extension is enabled (vanilla GNOME hides tray icons without it).
 - **Pause / Resume sync from the app header and the system tray.** A clear on/off
   control is now on every page (and in the tray menu), flipping the global pause
   the scheduled sync already respects — instead of being buried in a per-account
