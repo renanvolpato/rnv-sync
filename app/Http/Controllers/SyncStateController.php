@@ -97,12 +97,18 @@ class SyncStateController extends Controller
             }
         }
 
-        $syncing = $items !== []
-            || SyncHistory::where('status', 'running')->exists();
+        $paused = $sync->isPaused();
+        // When paused, the indicator says "Paused", period — even if a one-shot
+        // user action (Keep online / Keep local) is finishing. Those execute on
+        // purpose; a spinning "syncing" label there reads like the automatic
+        // sync came back, which is confusing.
+        $syncing = ! $paused && (
+            $items !== [] || SyncHistory::where('status', 'running')->exists()
+        );
 
         return response()->json([
             'syncing' => $syncing,
-            'paused' => $sync->isPaused(),
+            'paused' => $paused,
             'pending' => $pending,
             'items' => array_slice($items, 0, 20),
             'count' => count($items),

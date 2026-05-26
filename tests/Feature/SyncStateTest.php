@@ -2,6 +2,7 @@
 
 use App\Services\Files\PendingOps;
 use App\Services\Rclone\RcloneRunner;
+use App\Services\Sync\SyncService;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 
@@ -77,6 +78,19 @@ it('reports no live transfer when nothing is running (transfer = null)', functio
 
     expect($json['transfer'])->toBeNull();
     Http::assertNothingSent();
+});
+
+it('paused overrides syncing to false (a one-shot user action no longer reads as "syncing")', function () {
+    $probe = '/tmp/__paused_overlap_'.uniqid();
+    PendingOps::mark($probe);
+
+    app(SyncService::class)->setPaused(true);
+    $json = $this->get('/sync-state')->assertOk()->json();
+    expect($json['paused'])->toBeTrue()
+        ->and($json['syncing'])->toBeFalse(); // overridden by paused
+
+    app(SyncService::class)->setPaused(false);
+    PendingOps::clear($probe);
 });
 
 it('reports the paused flag and the tray pause endpoint toggles it (no auth/CSRF)', function () {
