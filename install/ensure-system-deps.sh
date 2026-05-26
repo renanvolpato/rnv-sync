@@ -64,18 +64,50 @@ install_tray_deps() {
   esac
 }
 
-install_nautilus_python() {
-  if python3 -c "import gi; gi.require_version('Nautilus','4.0')" 2>/dev/null \
-     || python3 -c "import gi; gi.require_version('Nautilus','3.0')" 2>/dev/null; then
-    return 0
+install_fm_python() {
+  # Install the python binding for whichever GTK file managers are present:
+  # Nautilus (GNOME), Nemo (Cinnamon/Mint), Caja (MATE). They share the same
+  # extension API, so RNV Sync emblems work on all three.
+  local fm ns vers v have pkg
+  local any_fm=0
+  for fm in nautilus nemo caja; do
+    command -v "${fm}" >/dev/null 2>&1 || continue
+    any_fm=1
+    case "${fm}" in
+      nautilus) ns=Nautilus; vers="4.0 3.0" ;;
+      nemo)     ns=Nemo;     vers="3.0" ;;
+      caja)     ns=Caja;     vers="2.0" ;;
+    esac
+    have=0
+    for v in ${vers}; do
+      python3 -c "import gi; gi.require_version('${ns}','${v}')" 2>/dev/null && have=1 && break
+    done
+    [ "${have}" = 1 ] && continue
+
+    say "Installing ${fm} python binding (file-manager emblems)"
+    case "${DISTRO}" in
+      ubuntu|debian|pop|linuxmint) ${SUDO} apt-get install -y "python3-${fm}" || warn "Could not install python3-${fm}" ;;
+      fedora|rhel|centos)          ${SUDO} dnf install -y "${fm}-python" || warn "Could not install ${fm}-python" ;;
+      arch|manjaro)                ${SUDO} pacman -S --noconfirm "python-${fm}" || warn "Could not install python-${fm}" ;;
+      *) warn "Unknown distro. Install the ${fm} python binding manually for emblems." ;;
+    esac
+  done
+
+  # No GTK file manager detected at all → still install Nautilus' binding so a
+  # later-installed Nautilus works (and headless/other setups get a sane default).
+  if [ "${any_fm}" = 0 ]; then
+    if python3 -c "import gi; gi.require_version('Nautilus','4.0')" 2>/dev/null \
+       || python3 -c "import gi; gi.require_version('Nautilus','3.0')" 2>/dev/null; then
+      return 0
+    fi
+    say "Installing python3-nautilus (file-manager emblems)"
+    case "${DISTRO}" in
+      ubuntu|debian|pop|linuxmint) ${SUDO} apt-get install -y python3-nautilus ;;
+      fedora|rhel|centos) ${SUDO} dnf install -y nautilus-python ;;
+      arch|manjaro) ${SUDO} pacman -S --noconfirm python-nautilus ;;
+      *) warn "Unknown distro. Install python3-nautilus / nautilus-python manually." ;;
+    esac
   fi
-  say "Installing python3-nautilus (file-manager emblems)"
-  case "${DISTRO}" in
-    ubuntu|debian|pop|linuxmint) ${SUDO} apt-get install -y python3-nautilus ;;
-    fedora|rhel|centos) ${SUDO} dnf install -y nautilus-python ;;
-    arch|manjaro) ${SUDO} pacman -S --noconfirm python-nautilus ;;
-    *) warn "Unknown distro. Install python3-nautilus / nautilus-python manually." ;;
-  esac
 }
 
 # If sourced, the caller picks which to run. If executed directly,
@@ -84,5 +116,5 @@ if [ "${BASH_SOURCE[0]:-$0}" = "$0" ]; then
   install_sqlite_ext
   install_inotify
   install_tray_deps
-  install_nautilus_python
+  install_fm_python
 fi

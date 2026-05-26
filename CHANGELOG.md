@@ -8,6 +8,12 @@ All notable changes to RNV Sync are documented here. The format is based on
 
 ### Added
 
+- **File-manager emblems now work on Nemo (Cinnamon / Linux Mint) and Caja
+  (MATE), not just Nautilus (GNOME).** The three share the nautilus-python API,
+  so one extension auto-binds to the host file manager; the installer installs it
+  into every supported one present and pulls the matching python binding
+  (`python3-nautilus` / `python3-nemo` / `python3-caja`). COSMIC Files (Pop!_OS)
+  and KDE Dolphin don't support this API — the installer detects them and says so.
 - **Check-for-update button in the app header.** Updating no longer means digging
   into Settings: the header has a one-click "Check for updates" control that shows
   whether you're behind and lets you apply the update right there. The Settings

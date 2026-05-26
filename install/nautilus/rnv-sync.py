@@ -1,34 +1,68 @@
 """
-RNV Sync — Nautilus extension.
+RNV Sync — file-manager extension (Nautilus / Nemo / Caja).
 
 Shows OneDrive-style emblems inside RNV Sync account folders:
-  • green check (emblem-default)        → downloaded (real file on disk)
-  • cloud/sync (emblem-synchronizing)   → cloud only (0-byte placeholder)
+  • green check (emblem-rnvsync-synced)   → downloaded (real file on disk)
+  • blue cloud  (emblem-rnvsync-cloud)    → cloud only (0-byte placeholder)
+  • sync arrows (emblem-rnvsync-syncing)  → operation in flight
 
-…and a right-click menu: "Baixar" (cloud → disk) / "Liberar espaço"
-(disk → cloud placeholder), bridged to the app via `php artisan
-rnvsync:fs`.
+…and a right-click menu: "Manter Local" (cloud → disk) / "Manter Online"
+(disk → cloud placeholder), bridged to the app via `php artisan rnvsync:fs`.
 
-Install: see install/nautilus/install.sh (needs python3-nautilus).
+ONE file serves all three GTK file managers — they share the same
+nautilus-python API (InfoProvider / MenuProvider / add_emblem). We load the
+binding that matches the HOST process (Nautilus, Nemo or Caja), so the same
+extension works on GNOME, Cinnamon/Mint and MATE. (COSMIC Files and KDE's
+Dolphin don't support this API — see install.sh, which detects and explains.)
+
+Install: see install/nautilus/install.sh.
 """
 
+import importlib
 import json
 import os
 import subprocess
 
 import gi
 
-# Declare the Nautilus API version BEFORE importing it (otherwise the
-# import can silently fail on some distros — e.g. Pop!_OS — and the
-# extension never loads). Try 4.x first, fall back to 3.x.
-for _v in ("4.0", "3.0"):
-    try:
-        gi.require_version("Nautilus", _v)
-        break
-    except ValueError:
-        continue
+# Pick the file-manager binding. Each FM only loads extensions from its own
+# directory and, inside its process, exposes its own gi namespace — so we must
+# bind to the HOST one. Detect it from the running executable, then try that
+# namespace first and fall back to the others (covers odd setups).
+_HOSTS = [
+    ("Nautilus", ("4.0", "3.0")),
+    ("Nemo", ("3.0",)),
+    ("Caja", ("2.0",)),
+]
 
-from gi.repository import Nautilus, GObject, GLib  # noqa: E402
+
+def _ordered_hosts():
+    try:
+        exe = os.path.basename(os.readlink("/proc/self/exe")).lower()
+    except OSError:
+        exe = ""
+    prefer = {"nautilus": "Nautilus", "nemo": "Nemo", "caja": "Caja"}.get(exe)
+    if prefer:
+        return sorted(_HOSTS, key=lambda h: 0 if h[0] == prefer else 1)
+    return _HOSTS
+
+
+FM = None
+for _ns, _vers in _ordered_hosts():
+    for _v in _vers:
+        try:
+            gi.require_version(_ns, _v)
+            FM = importlib.import_module("gi.repository." + _ns)
+            break
+        except (ValueError, ImportError):
+            continue
+    if FM is not None:
+        break
+
+if FM is None:  # no supported binding present — nothing we can do
+    raise ImportError("RNV Sync: no Nautilus/Nemo/Caja python binding found")
+
+from gi.repository import GObject, GLib  # noqa: E402
 
 CONFIG = os.path.expanduser("~/.config/rnv-sync/extension.json")
 
@@ -95,15 +129,15 @@ _EMBLEM = {
 }
 
 
-class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProvider):
+class RnvSyncExtension(GObject.GObject, FM.InfoProvider, FM.MenuProvider):
 
     def __init__(self):
         super().__init__()
-        # Live refresh: Nautilus only re-reads emblems when asked, so
+        # Live refresh: the file manager only re-reads emblems when asked, so
         # poll the (small) set of on-screen items every 2s and force a
         # re-read of any whose state changed — emblems update on their
         # own within ~2s instead of needing a manual refresh.
-        self._seen = {}  # path -> [NautilusFileInfo, last_state]
+        self._seen = {}  # path -> [FileInfo, last_state]
         GLib.timeout_add_seconds(2, self._tick)
 
     def update_file_info(self, file):
@@ -147,9 +181,9 @@ class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProv
         )
 
     def _refresh(self, files):
-        # Force Nautilus to re-read emblems so the state updates without
-        # a manual refresh. It will reflect "syncing" immediately and the
-        # final state on the next poll.
+        # Force a re-read of emblems so the state updates without a manual
+        # refresh. It reflects "syncing" immediately and the final state on
+        # the next poll.
         for f in files:
             try:
                 f.invalidate_extension_info()
@@ -157,7 +191,7 @@ class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProv
                 pass
 
     def get_file_items(self, *args):
-        # Nautilus 4 passes (files); Nautilus 3 passes (window, files).
+        # Nautilus 4 passes (files); Nautilus 3 / Nemo / Caja pass (window, files).
         files = args[-1]
         cfg = _load()
         bases = cfg.get("bases", [])
@@ -166,7 +200,7 @@ class RnvSyncExtension(GObject.GObject, Nautilus.InfoProvider, Nautilus.MenuProv
             return []
 
         any_cloud = any(not _is_downloaded(p) for p in targets)
-        menu = Nautilus.MenuItem(
+        menu = FM.MenuItem(
             name="RnvSync::Action",
             label=("Manter Local (RNV Sync)" if any_cloud else "Manter Online (RNV Sync)"),
         )

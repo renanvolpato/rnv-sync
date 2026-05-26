@@ -24,7 +24,7 @@ require composer
 install_sqlite_ext
 install_inotify
 install_tray_deps
-install_nautilus_python
+install_fm_python
 
 if ! php -m 2>/dev/null | grep -qi '^pdo_sqlite$'; then
   warn "pdo_sqlite still not loaded. You may need to enable it in php.ini."
