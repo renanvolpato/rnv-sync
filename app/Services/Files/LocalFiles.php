@@ -190,47 +190,117 @@ class LocalFiles
         $this->configGenerator->regenerate();
 
         $local = $this->localPathFor($account, $path);
-        $remote = $account->remote_name.':'.ltrim($path, '/');
 
         if (is_dir($local)) {
-            // Upload any real files in the tree, then placeholder it.
-            if ($this->treeHasRealFile($local)) {
-                $result = $this->rclone->run(['copy', $local, $remote, '--ignore-size', '--checksum'], ['timeout' => 3600]);
-                // Data-safety: never drop the local tree if the upload
-                // failed — that would lose the user's files. Throw so
-                // the job retries / surfaces an Erro instead.
-                if (! $result->successful()) {
-                    throw new \RuntimeException(
-                        'rclone upload failed (folder kept locally): '.(trim($result->stderr) ?: 'unknown error')
-                    );
-                }
-            }
-            // Turn the real files into 0-byte ☁ placeholders IN PLACE — do NOT
-            // delete the tree. Deleting it would (a) drop the folder from the
-            // file manager and (b) look like a user deletion to the watcher,
-            // which (with delete-propagation on) would purge the copies we just
-            // uploaded. Truncating keeps every entry present, so the watcher
-            // sees them as still there and never propagates a deletion.
-            $this->placeholderizeTree($local);
+            $this->freeSubtree($account, $path, 0);
 
             return;
         }
 
         if (is_file($local)) {
-            // size 0 = our placeholder/empty → don't overwrite cloud.
-            if (filesize($local) > 0) {
-                $result = $this->rclone->run(['copyto', $local, $remote], ['timeout' => 3600]);
-                // Data-safety: keep the local file if the upload failed.
-                if (! $result->successful()) {
-                    throw new \RuntimeException(
-                        'rclone upload failed (file kept locally): '.(trim($result->stderr) ?: 'unknown error')
-                    );
-                }
-            }
-            File::delete($local);
-            File::ensureDirectoryExists(dirname($local));
-            File::put($local, ''); // cloud placeholder (0 bytes)
+            $this->freeFile($account, $path);
         }
+    }
+
+    /** Per-shard upload timeout (s) for "Keep online" on a folder. */
+    private const FREE_TIMEOUT = 1700;
+
+    /** Per-file upload timeout (s). */
+    private const FREE_FILE_TIMEOUT = 600;
+
+    /** How deep we keep splitting a too-slow subtree before giving up. */
+    private const FREE_MAX_SHARD_DEPTH = 3;
+
+    /**
+     * Free a folder subtree (Keep online). Tries the whole subtree first (one
+     * batched rclone copy is fastest). If THAT times out / errors — common on
+     * 80k+ file folders where the per-file checksum verify can't fit in the
+     * timeout — SHARDS into the immediate children and frees each separately,
+     * up to MAX depth. Only what successfully uploaded gets truncated; siblings
+     * are independent (one child failing doesn't poison the others). A child
+     * that throws bubbles the error up so the caller surfaces an Erro.
+     */
+    private function freeSubtree(Account $account, string $relPath, int $depth): void
+    {
+        $local = $this->localPathFor($account, $relPath);
+        if (! is_dir($local)) {
+            return;
+        }
+        // Already all placeholders → nothing to upload, nothing to truncate.
+        if (! $this->treeHasRealFile($local)) {
+            return;
+        }
+
+        $remote = $account->remote_name.':'.ltrim($relPath, '/');
+
+        try {
+            $result = $this->rclone->run(
+                ['copy', $local, $remote, '--ignore-size', '--checksum'],
+                ['timeout' => self::FREE_TIMEOUT],
+            );
+            if (! $result->successful()) {
+                throw new \RuntimeException('rclone exit '.$result->exitCode.': '.trim($result->stderr));
+            }
+            // Whole-subtree upload succeeded — safe to truncate the whole tree.
+            $this->placeholderizeTree($local);
+
+            return;
+        } catch (\Throwable $e) {
+            if ($depth >= self::FREE_MAX_SHARD_DEPTH) {
+                // Give up rather than try forever — local files are kept so no
+                // data is lost; the user sees an Erro and can free per file.
+                throw new \RuntimeException(
+                    'rclone upload failed (folder kept locally): '.$e->getMessage()
+                );
+            }
+            // Fall through and shard into immediate children.
+        }
+
+        $firstErr = null;
+        foreach (new \DirectoryIterator($local) as $entry) {
+            if ($entry->isDot() || $entry->isLink()) {
+                continue;
+            }
+            $childRel = ltrim(($relPath === '' ? '' : $relPath.'/').$entry->getFilename(), '/');
+            try {
+                if ($entry->isDir()) {
+                    $this->freeSubtree($account, $childRel, $depth + 1);
+                } elseif ($entry->isFile()) {
+                    $this->freeFile($account, $childRel);
+                }
+            } catch (\Throwable $e) {
+                // Sibling failures don't poison each other; we'll re-throw the
+                // first one so the caller knows something needs attention.
+                $firstErr = $firstErr ?? $e;
+            }
+        }
+        if ($firstErr !== null) {
+            throw $firstErr;
+        }
+    }
+
+    /** Upload a single real file (if it has content) then turn it into a placeholder. */
+    private function freeFile(Account $account, string $relPath): void
+    {
+        $local = $this->localPathFor($account, $relPath);
+        if (! is_file($local)) {
+            return;
+        }
+
+        $remote = $account->remote_name.':'.ltrim($relPath, '/');
+        // size 0 = our placeholder/empty → don't overwrite cloud.
+        if (filesize($local) > 0) {
+            $result = $this->rclone->run(['copyto', $local, $remote], ['timeout' => self::FREE_FILE_TIMEOUT]);
+            // Data-safety: keep the local file if the upload failed.
+            if (! $result->successful()) {
+                throw new \RuntimeException(
+                    'rclone upload failed (file kept locally): '.(trim($result->stderr) ?: 'unknown error')
+                );
+            }
+        }
+        File::delete($local);
+        File::ensureDirectoryExists(dirname($local));
+        File::put($local, ''); // cloud placeholder (0 bytes)
     }
 
     /**

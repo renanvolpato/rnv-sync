@@ -84,6 +84,35 @@ it('free() leaves a 0-byte cloud placeholder, keeping it visible', function () {
         ->and($files->status($this->account, $rel))->toBe('cloud');
 });
 
+it('free() on a folder shards when the whole-tree upload fails (so big folders work)', function () {
+    // Whole-folder rclone copy fails (simulates the per-checksum verify pass
+    // timing out on a huge folder). Per-subdir / per-file calls succeed.
+    $this->mock(RcloneRunner::class)
+        ->shouldReceive('run')
+        ->andReturnUsing(function (array $args) {
+            $remote = collect($args)->first(fn ($a) => is_string($a) && str_contains($a, ':')) ?? '';
+            // Whole top-level subtree → too slow → fail.
+            if (str_ends_with($remote, ':Big')) {
+                return new RcloneResult(124, '', 'timed out');
+            }
+
+            // Any sharded child call → succeed.
+            return new RcloneResult(0, '', '');
+        });
+
+    $files = app(LocalFiles::class);
+    $base = $files->localPathFor($this->account, 'Big');
+    File::ensureDirectoryExists($base.'/sub');
+    File::put($base.'/top.txt', 'real');
+    File::put($base.'/sub/inner.txt', 'real');
+
+    $files->free($this->account, 'Big');
+
+    // Both files were placeholderized after the per-shard upload succeeded.
+    expect(filesize($base.'/top.txt'))->toBe(0)
+        ->and(filesize($base.'/sub/inner.txt'))->toBe(0);
+});
+
 it('free() never drops the local file when the upload fails (data-safety)', function () {
     $this->mock(RcloneRunner::class)
         ->shouldReceive('run')->andReturn(new RcloneResult(1, '', 'network down'));
