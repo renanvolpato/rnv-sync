@@ -52,18 +52,27 @@ it('pushes real files only (skips placeholders) and pulls just kept files', func
         ->and($push)->toContain('--exclude')
         ->and($push)->not->toContain('--files-from');
 
+    // Between push and pull there's now a SAFETY probe — a batched
+    // 'rclone lsjson --files-from list' that drops any path whose CLOUD entry
+    // is 0 bytes, so the pull can never replace a real local file with a
+    // corrupted 0-byte cloud upload.
+    $safety = $calls[1];
+    expect($safety[0])->toBe('lsjson')
+        ->and($safety)->toContain('--files-from');
+
     // pull: copy remote -> local --files-from <list of real files>, --update,
     // and crucially NO --exclude (rclone rejects --files-from + filters).
-    $pull = $calls[1];
+    $pull = $calls[2];
     expect($pull[0])->toBe('copy')
         ->and($pull[2])->toBe($this->folder->local_path)
         ->and($pull)->toContain('--files-from')
         ->and($pull)->toContain('--update')
         ->and($pull)->not->toContain('--exclude');
 
-    // The change-sync no longer does the heavy recursive listing — that moved
-    // to rnvsync:refresh-placeholders — so it only ever issues copies here.
-    expect(collect($calls)->every(fn ($c) => ($c[0] ?? '') === 'copy'))->toBeTrue();
+    // The change-sync's only heavy verbs are copy (push/pull) and the new
+    // lightweight lsjson probe in between; the recursive listing moved to
+    // rnvsync:refresh-placeholders.
+    expect(collect($calls)->every(fn ($c) => in_array($c[0] ?? '', ['copy', 'lsjson'], true)))->toBeTrue();
 });
 
 it('does no transfer work for a fully-online folder (placeholders only)', function () {
